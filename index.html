@@ -1,0 +1,626 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="icon" type="image/png" href="v.png">
+</head>
+<body>
+<title>Veidekke × Reduzer — LCA merge status</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root, :root[data-theme="light"], :root[data-theme="dark"]{
+    color-scheme:light;
+    --bg:#f1ece0; --surface:#fbf9f2; --surface-2:#eae5d6; --surface-3:#e1dbc9;
+    --ink:#242017; --muted:#6b6553; --faint:#968f7a; --line:#e4dece; --line-2:#d0c9b5;
+    --accent:#0e7c72; --accent-2:#0a5a53; --accent-soft:#d6ebe4;
+    --good:#2f7735; --good-bg:#e7f0df; --warn:#a4560a; --warn-bg:#f6ead6;
+    --crit:#b5211f; --crit-bg:#f7e3dd; --info:#0b6aa2; --info-bg:#e1ecf3;
+    --ref:#6321c9; --ref-bg:#eadff6;
+    --shadow:0 1px 2px rgba(72,60,33,.06),0 8px 26px rgba(72,60,33,.08);
+    --shadow-lg:0 12px 40px rgba(72,60,33,.15);
+    --sans:"Segoe UI Variable","Segoe UI",system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;
+    --mono:"Cascadia Code","Cascadia Mono",Consolas,ui-monospace,monospace;
+    --r:14px; --r-sm:9px;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.55;
+    -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  .mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+  .wrap{max-width:1200px;margin:0 auto;padding:0 22px}
+
+  .hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+  .hero::before{content:"";position:absolute;inset:0;background:
+    radial-gradient(1100px 340px at 8% -30%,var(--accent-soft),transparent 60%),
+    radial-gradient(900px 300px at 100% -10%,color-mix(in srgb,var(--info-bg) 70%,transparent),transparent 55%);
+    opacity:.9;pointer-events:none}
+  .hero-in{position:relative;max-width:1200px;margin:0 auto;padding:30px 22px 26px}
+  .brandbar{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+  .wm{font-weight:800;letter-spacing:.02em;font-size:19px;line-height:1}
+  .wm-logo{height:30px;width:auto;display:block}
+  .wm-v{color:var(--ink)}
+  .wm-r{color:var(--accent-2);text-transform:lowercase;font-weight:750}
+  .wm-x{color:var(--faint);font-size:14px}
+  .eyebrow{font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent-2);font-weight:700}
+  h1{font-size:clamp(24px,3.4vw,34px);margin:8px 0 6px;letter-spacing:-.02em;font-weight:720;text-wrap:balance;max-width:20ch}
+  .lede{color:var(--muted);max-width:64ch;font-size:15px;margin:0}
+  .meta-row{display:flex;gap:18px;flex-wrap:wrap;margin-top:14px;font-size:12.5px;color:var(--faint)}
+  .meta-row b{color:var(--ink);font-weight:600}
+
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:13px;margin:22px 0 4px}
+  .tile{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:15px 17px;box-shadow:var(--shadow);position:relative}
+  .tile .n{font-family:var(--mono);font-size:30px;font-weight:680;letter-spacing:-.03em;line-height:1;font-variant-numeric:tabular-nums}
+  .tile .l{font-size:12.5px;color:var(--muted);margin-top:6px;font-weight:500}
+  .tile .sub{font-size:11px;color:var(--faint);margin-top:2px}
+  .tile.hi{border-color:color-mix(in srgb,var(--accent) 45%,var(--line))}.tile.hi .n{color:var(--accent-2)}
+  .tile.warn .n{color:var(--warn)} .tile.crit .n{color:var(--crit)} .tile.good .n{color:var(--good)}
+  .tile .bar{position:absolute;left:0;top:14px;bottom:14px;width:3px;border-radius:3px;background:var(--line-2)}
+  .tile.hi .bar{background:var(--accent)}.tile.warn .bar{background:var(--warn)}.tile.crit .bar{background:var(--crit)}.tile.good .bar{background:var(--good)}
+
+  .bar-row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:26px 0 6px;position:sticky;top:0;z-index:15;
+    background:color-mix(in srgb,var(--bg) 90%,transparent);backdrop-filter:blur(8px);padding:10px 0}
+  .tabs{display:flex;gap:4px;background:var(--surface-2);border:1px solid var(--line);border-radius:999px;padding:4px}
+  .tab{border:0;background:transparent;color:var(--muted);font:inherit;font-size:13px;font-weight:600;padding:6px 15px;border-radius:999px;cursor:pointer;transition:.14s}
+  .tab[aria-selected="true"]{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
+  .spacer{flex:1 1 40px}
+  input.search{font:inherit;background:var(--surface);border:1px solid var(--line-2);border-radius:10px;color:var(--ink);padding:8px 12px;font-size:13.5px}
+  .searchwrap{flex:1 1 220px;min-width:160px}
+  input.search{width:100%}
+  input.search:focus-visible{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent)}
+
+  .chips{display:flex;gap:7px;flex-wrap:wrap;margin:2px 0 16px}
+  .chip{border:1px solid var(--line-2);background:var(--surface);color:var(--muted);font:inherit;font-size:12.5px;font-weight:550;
+    padding:5px 12px;border-radius:999px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;transition:.12s}
+  .chip:hover{border-color:var(--accent);color:var(--ink)}
+  .chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+  .chip .dot{width:8px;height:8px;border-radius:50%}
+  .chip .k{font-family:var(--mono);font-size:11px;opacity:.75}
+
+  .board{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow)}
+  .scroll{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;min-width:900px}
+  thead th{text-align:left;font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--faint);font-weight:700;
+    padding:12px 15px;border-bottom:1px solid var(--line);background:var(--surface-2);white-space:nowrap;cursor:pointer;user-select:none}
+  thead th:hover{color:var(--ink)}
+  thead th .ar{display:inline-block;margin-left:7px;color:var(--accent-2);font-size:9px}
+  th.num,td.num{text-align:right} th.ctr,td.ctr{text-align:center}
+  tbody tr.row{border-top:1px solid var(--line);cursor:pointer;transition:background .1s}
+  tbody tr.row:hover{background:var(--surface-2)}
+  tbody td{padding:12px 15px;vertical-align:middle}
+  .fname{font-weight:600;font-size:13.5px;display:flex;align-items:center;gap:9px}
+  .caret{color:var(--faint);font-size:10px;transition:transform .16s;flex:none}
+  tr.row.open .caret{transform:rotate(90deg)}
+  .chcell{font-family:var(--mono);font-size:12.5px;font-weight:600}
+  .bpill{font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;background:var(--surface-3);color:var(--muted)}
+  .scope{font-family:var(--mono);font-weight:650;font-variant-numeric:tabular-nums}
+  .scope.pend{color:var(--faint);font-weight:500}
+
+  .st{font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+  .st .dot{width:6px;height:6px;border-radius:50%}
+  .st-done{color:var(--good);background:var(--good-bg)}.st-done .dot{background:var(--good)}
+  .st-prog{color:var(--warn);background:var(--warn-bg)}.st-prog .dot{background:var(--warn)}
+  .st-none{color:var(--faint);background:var(--surface-3)}.st-none .dot{background:var(--faint)}
+  .st-hold{color:var(--crit);background:var(--crit-bg)}.st-hold .dot{background:var(--crit)}
+
+  .cbadge{display:inline-flex;gap:5px;align-items:center;font-size:11px;font-weight:650;font-family:var(--mono)}
+  .cbadge .b{padding:1px 7px;border-radius:6px}
+  .b-open{color:var(--crit);background:var(--crit-bg)}.b-wait{color:var(--warn);background:var(--warn-bg)}.b-ans{color:var(--good);background:var(--good-bg)}
+  .cbadge.mut{color:var(--faint)}
+
+  tr.detail>td{padding:0;background:var(--surface-2);border-top:1px solid var(--line)}
+  .panel{padding:18px 20px 22px;display:grid;grid-template-columns:270px 1fr;gap:26px}
+  .panel h4{margin:0 0 9px;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);font-weight:700}
+  .kv{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:13px;margin-bottom:16px}
+  .kv dt{color:var(--muted)} .kv dd{margin:0;font-weight:550;text-align:right}
+  .statline{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+  .statline .lab{font-size:10px;color:var(--faint);text-transform:uppercase;letter-spacing:.05em;align-self:center}
+  .groups{display:flex;flex-wrap:wrap;gap:6px}
+  .gchip{font-family:var(--mono);font-size:11px;background:var(--surface);border:1px solid var(--line-2);border-radius:6px;padding:2px 8px}
+  .gchip b{color:var(--accent-2)}
+  .epd{font-family:var(--mono);font-size:11.5px;color:var(--ref);background:var(--ref-bg);border-radius:6px;padding:5px 9px;margin-top:6px;word-break:break-word}
+
+  .thread{display:flex;flex-direction:column;gap:11px}
+  .cmt{background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:11px 13px;border-left:3px solid var(--faint)}
+  .cmt.open{border-left-color:var(--crit)}.cmt.wait{border-left-color:var(--warn)}.cmt.ans{border-left-color:var(--good)}.cmt.note{border-left-color:var(--info)}
+  .cmt-head{display:flex;gap:8px;align-items:center;margin-bottom:5px;flex-wrap:wrap}
+  .lv{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:1px 7px;border-radius:5px}
+  .lv-question{color:var(--info);background:var(--info-bg)}.lv-confirm{color:var(--ref);background:var(--ref-bg)}
+  .lv-blocker{color:var(--crit);background:var(--crit-bg)}.lv-note{color:var(--muted);background:var(--surface-3)}
+  .sstate{margin-left:auto;font-size:10.5px;font-weight:700;font-family:var(--mono);padding:1px 8px;border-radius:5px}
+  .ss-open{color:var(--crit);background:var(--crit-bg)}.ss-wait{color:var(--warn);background:var(--warn-bg)}.ss-ans{color:var(--good);background:var(--good-bg)}
+  .unsent{font-size:10px;font-weight:700;color:var(--warn);border:1px dashed var(--warn);border-radius:5px;padding:0 6px;margin-left:6px;letter-spacing:.03em;white-space:nowrap}
+  .cmt .q{font-size:13.5px;line-height:1.5}
+  .cmt .a{font-size:13px;line-height:1.5;margin-top:7px;padding-top:7px;border-top:1px dashed var(--line-2);color:var(--ink)}
+  .cmt .a::before{content:"↳ Tollef: ";color:var(--accent-2);font-weight:700;font-family:var(--mono);font-size:11.5px}
+  .cmt .a.wait::before{content:"↳ waiting: ";color:var(--warn)}
+
+  .cview{display:flex;flex-direction:column;gap:10px}
+  .crow{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:13px 15px;box-shadow:var(--shadow);border-left:3px solid var(--faint)}
+  .crow.open{border-left-color:var(--crit)}.crow.wait{border-left-color:var(--warn)}.crow.ans{border-left-color:var(--good)}.crow.note{border-left-color:var(--info)}
+  .crow-head{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-bottom:6px}
+  .filetag{font-family:var(--mono);font-size:11.5px;font-weight:650;color:var(--ink);background:var(--surface-3);padding:2px 9px;border-radius:6px;cursor:pointer}
+  .filetag:hover{color:var(--accent-2)}
+  .a{font-size:13px}.crow .a{margin-top:6px;padding-top:6px;border-top:1px dashed var(--line-2)}
+  .crow .a::before{content:"↳ Tollef: ";color:var(--accent-2);font-weight:700;font-family:var(--mono);font-size:11.5px}
+  .crow .a.wait::before{content:"↳ waiting: ";color:var(--warn)}
+  .empty{padding:46px;text-align:center;color:var(--muted)}
+  footer{margin:30px 0 60px;font-size:12px;color:var(--faint);line-height:1.7;border-top:1px solid var(--line);padding-top:18px}
+  .leg{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:6px}
+  .leg span{display:inline-flex;align-items:center;gap:6px}
+  .leg i{width:9px;height:9px;border-radius:50%;display:inline-block}
+  @media (max-width:760px){.panel{grid-template-columns:1fr}}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto}}
+</style>
+
+<div class="hero">
+  <div class="hero-in">
+    <div class="brandbar"><img class="wm-logo" src="data:image/png;base64,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" alt="Veidekke"><span class="wm wm-v">Veidekke</span><span class="wm-x">×</span><span class="wm wm-r">reduzer</span></div>
+    <div class="eyebrow">NS3451 LCA merge</div>
+    <h1>Source-file status &amp; open items</h1>
+    <p class="lede">Every Excel export received from Veidekke — parse state, in-scope row counts (visible / autofiltered rows only), review &amp; EPD-mapping progress, and the full comment thread per file.</p>
+    <div class="meta-row">
+      <span>Updated <b>4 Aug 2026</b></span>
+      <span><b>Master built</b> — codes 21, 22 (222 + 223), 23, 25 &amp; 26 (chapter 261) merged · 1 383 rows · 420 unique products</span>
+      <span>Owner (from filename): <b>T</b> = Tollef · <b>I</b> = Ingrid</span>
+      <span>Chapter = the <b>NS3451</b> column (AD)</span>
+    </div>
+    <p class="lede" style="margin-top:14px;padding:12px 15px;background:var(--info-bg);border:1px solid var(--line-2);border-radius:var(--r-sm);max-width:none">
+      <b>29 Jul — the Import sheet now carries the source description.</b> It previously showed only a bare
+      product name. The article text lives in source <b>column I</b>, but Veidekke filtered different files at
+      <b>different hierarchy levels</b>: 231/232/26/252/21-T leave the <i>Ressurs</i> rows visible (col I populated),
+      while 223/213&amp;216/251 leave the <i>Underpost</i> rows visible, which have no col-I text at all — hence
+      100 % empty for exactly those three files. For those we now read the text off the child ressurs rows
+      (text only; they stay out of scope). Coverage went 0 → 100 % on all three, and it immediately resolved
+      several open items — see the file rows below.
+    </p>
+    <p class="lede" style="margin-top:14px;padding:12px 15px;background:var(--accent-soft);border:1px solid var(--line-2);border-radius:var(--r-sm);max-width:none">
+      <b>3 Aug — chapter 23 Leca walls reworked, steel studs finally priced, three new exclusion rules.</b>
+      The Leca blocks now get <b>one EPD per thickness</b> (Leca Universalblokk 15 / 20 / 25 cm; the 300 mm
+      Isoblokk rides on the 25 cm one) and are booked as <b>1 m² of wall</b> rather than a volume — those
+      datasets carry a kg/m², so the m² already encodes the thickness, and 8 blocks × 0.25 × 0.50 m landing
+      exactly on 1.00 m²/m² is what validates the block counts. The whole <b>u-blokk build-up is dropped</b>
+      (block + u-blokkarmering + Weber B20 tørrbetong, 9 rows), the <b>pussmørtel is kept</b> on a new Enova
+      plaster-mortar EPD — and whether that double-counts against the Leca per-m² EPD is now the one open
+      question on these walls. <b>Fugearmering</b> is converted stk → m³ from the Ø18 mm × 4 m in its
+      resource name. Veidekke's <b>kg/m table for the thin-plate steel profiles</b> arrived, so the 232
+      studs are converted lm → kg and mapped (the 245 mm profiles fall off the top of the table and are
+      flagged as understated). Also dropped everywhere: <b>Glava laftestrimmel</b> (17 rows) and
+      <b>every row whose quantity is 0</b> (105 rows). Master 1 518 → <b>1 386 rows</b>.
+    </p>
+    <p class="lede" style="margin-top:14px;padding:12px 15px;background:var(--accent-soft);border:1px solid var(--line-2);border-radius:var(--r-sm);max-width:none">
+      <b>4 Aug — EPD mapping closed on 251, 252 and 26-T; 26-T review closed; every note re-synced to the email.</b>
+      The mapping pass on those three files is <b>done</b> — every line that can be mapped out of the file itself
+      now carries an EPD, and what is left unmapped is blocked on a number only Veidekke can give (kg/m² of
+      prestressing cable, m³ of DT-element per m², a mass for the six no-mass roof-element lines and the twelve
+      I-bjelker). <b>Veidekke's own column is untouched</b> — these are our two columns only. The comment threads
+      below are now rewritten against the outgoing email, which had moved ahead of this board in several places:
+      the <b>HSQ beams and the 222 HUP columns</b> are on the Enova hollow-profile EPD (1.5 → 3.62 kgCO₂e/kg,
+      13 rows), <b>Prefab betongbjelke</b> is on Veidekke Prefab's own Lavkarbonklasse A dataset,
+      <b>Skallvegg</b> is solved with Con-Form 'Shell wall (Orkanger)' plus a derived EPS line we added because
+      the insulation was missing from their model, <b>Magerbetong</b> has a real lean-concrete EPD
+      (Low carbon A B20) instead of the B35 stand-in, the two <b>RADONBRØNN</b> lines are excluded, and
+      <b>Teglforblending</b> has become a double-count question now that the resource shows the m² row already
+      contains the mortar and the murarmering. Chapter 26 gains its biggest question yet:
+      <b>26.O02 is a line-for-line clone of 26.O01</b> — 106 rows, 45 % of the chapter.
+    </p>
+    <p class="lede" style="margin-top:10px;padding:12px 15px;background:var(--crit-bg);border:1px solid var(--line-2);border-radius:var(--r-sm);max-width:none">
+      <b>222 is ON HOLD — on Veidekke's side.</b> The email carries a single blocking item for this chapter:
+      we believe it is a work-in-progress export and a newer one exists with them. Nothing more happens here
+      until they answer. The eight detailed questions drafted for the chapter are <b>held back</b> (archived
+      in <span class="mono">05_email/archive_222_questions.html</span>, shown as WAITING on this board). If
+      Veidekke replies that this IS the intended file, Eduard goes through the chapter personally and
+      reformulates them.
+    </p>
+    <p class="lede" style="margin-top:10px;padding:12px 15px;background:var(--crit-bg);border:1px solid var(--line-2);border-radius:var(--r-sm);max-width:none">
+      <b>29 Jul — 222 is merged, and we had it wrong.</b> This chapter was recorded here as “wrongly
+      formatted and unfiltered” and held out of the master. Checking that claim before putting it in an
+      email to Veidekke showed it was false: <b>351 visible rows, every one Fjernes = Nei</b>, NS3451 222
+      throughout, and clean geometry. It is now merged (master 1 183 → <b>1 534 rows</b>). The confusing
+      part was five extra working columns plus an empty <span class="mono">ID Reduzer</span> column that
+      shift the layout to 38 columns. Two build-integrity fixes came out of the same round — a rule fix
+      can now <i>remove</i> a preserved EPD id (<span class="mono">PURGE_IDS</span>), and the recovered
+      column-I text is strictly display-only so it can never move a product onto the wrong EPD.
+    </p>
+  </div>
+</div>
+
+<div class="wrap">
+  <section class="tiles" id="tiles"></section>
+
+  <div class="bar-row">
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" aria-selected="true" data-view="files">By file</button>
+      <button class="tab" role="tab" aria-selected="false" data-view="comments">All comments</button>
+    </div>
+    <span class="spacer"></span>
+    <input class="search" id="code" style="flex:0 0 auto;max-width:186px" placeholder="Chapter code — 22, 223…" inputmode="numeric" autocomplete="off" aria-label="Filter by NS3451 chapter code">
+    <span class="searchwrap"><input class="search" id="q" placeholder="Search files, comments…" autocomplete="off"></span>
+  </div>
+
+  <div class="chips" id="chips"></div>
+
+  <div id="filesView">
+    <div class="board"><div class="scroll"><table>
+      <thead><tr>
+        <th data-k="file">File<span class="ar"></span></th>
+        <th data-k="chapter">Chapter<span class="ar"></span></th>
+        <th class="ctr" data-k="owner">Owner<span class="ar"></span></th>
+        <th class="ctr" data-k="veidekke">Veidekke<span class="ar"></span></th>
+        <th class="ctr" data-k="review">Review<span class="ar"></span></th>
+        <th class="ctr" data-k="epd">EPD map<span class="ar"></span></th>
+        <th class="num" data-k="scope">In scope<span class="ar"></span></th>
+        <th data-k="open">Open items<span class="ar"></span></th>
+      </tr></thead>
+      <tbody id="body"></tbody>
+    </table></div><div class="empty" id="emptyF" hidden>No files match.</div></div>
+  </div>
+
+  <div id="commentsView" hidden><div class="cview" id="cbody"></div><div class="empty" id="emptyC" hidden>No comments match.</div></div>
+
+  <footer>
+    <div><b>Veidekke status</b> (their side): D = Done · P = In progress · N = Not started · On hold = parked on their side (222). <b>Review / EPD map</b> (Reduzer side): D = Done · H = In progress · N = Not started.</div>
+    <div class="leg" style="margin-top:10px">
+      <span><i style="background:var(--good)"></i> Answered — Tollef answered</span>
+      <span><i style="background:var(--warn)"></i> Waiting — needs Veidekke / Herman / external data</span>
+      <span><i style="background:var(--crit)"></i> Open — needs action or a decision</span>
+      <span><i style="background:var(--info)"></i> Note</span>
+      <span style="border:1px dashed var(--warn);border-radius:5px;padding:0 6px;color:var(--warn);font-weight:700;font-size:11px">✎ UNSENT</span> = drafted on our side, not yet sent to Veidekke
+    </div>
+    <div style="margin-top:12px">Chapter = the <span class="mono">NS3451</span> column (AD); element-group codes shown in a file's detail (e.g. <span class="mono">22.A01</span>) are finer element labels within that chapter, not a different chapter. In-scope counts from a label-based extractor (columns located by their <span class="mono">KolonneNN</span> headers). Ch 21 = 60 and ch 26 = 234 match the agreed validation targets. Click a column header to sort; default sort is by chapter.</div>
+  </footer>
+</div>
+
+<script>
+const SL = {D:["Done","st-done"],P:["In progress","st-prog"],H:["In progress","st-prog"],N:["Not started","st-none"],W:["Waiting","st-hold"],O:["On hold","st-hold"]};
+// f, ch(=NS3451/AD), b(owner letter), v/r/m statuses, scope, fmt, groups, epd, comments[{lv,st,t,a,aw}]
+const DATA=[
+ {f:"21-T_ferdig.xlsx",ch:"216",b:"T",v:"D",r:"D",m:"D",scope:60,fmt:"Standard 32-col",
+  groups:[["21.I01",12],["21.I02",24],["21.I03",12],["21.I04",12]],
+  comments:[
+    {lv:"confirm",st:"answered",t:"XPS insulation input changed to m³ (m² × thickness).",a:"OK — confirmed."},
+    {lv:"question",st:"answered",t:"Average concrete EPD for the Plasstøpt betong vanntett (gulv/vegg)? Which strength & carbon class?",a:"Use B40, low carbon 20 (rebar: Celsa). — Note 27.7: the rebar id in use is the Enova generic, not Celsa; flagged for re-evaluation."},
+    {lv:"question",st:"open",sent:false,t:"Concrete EPD: using the generic low-carbon EPD (sy0z9WpGr2zoNwIGfNDy) for both watertight concretes for now. The file spec reads B45 but Tollef said B40 (low-carbon 20) — confusion? Confirm the class or find a specific watertight-concrete EPD.",a:""},
+    {lv:"question",st:"open",sent:false,t:"XPS EPD: used the standard NEPD-3336-1961-EN (brand Sunde AS / Sundolitt?). We chose standard values where we could — ask Veidekke to confirm or provide a specific brand if they want (same applies to the rest).",a:""},
+    {lv:"note",st:"answered",t:"EPDs assigned: rebar K1GLOoaSiXFa6AUukxY7; XPS OYvuKLsimyPXkrQt26gl; concrete sy0z9WpGr2zoNwIGfNDy. Merged into chapter-21 master (60 rows, 4 products).",a:""},
+    {lv:"note",st:"answered",t:"Matches validation target exactly (60 in-scope rows, 4 element groups)."},
+    {lv:"note",st:"answered",t:"QUANTITIES NET OF WASTE (27 Jul) — this file's quantity column carried Veidekke's 5 % Svinn, so every row is now divided by 1.05: rebar 420 → 400 kg and 756 → 720 kg, XPS 6.93 → 6.6, concrete 1.05 → 1.0 m³. Reduzer applies its own Wastage per product, so keeping Veidekke's would double-count it.",a:"Eduard 27.7: 100 mm thick → .1 m³, not .105."}]},
+
+ {f:"26-T_klartingjennomgang.xlsx",ch:"261",b:"T",v:"D",r:"D",m:"D",scope:233,fmt:"Standard 32-col",
+  groups:[["26.O01",106],["26.O02",106],["26.O03",12],["26.E01",6],["26.A01",2],["26.J06",1],["26.L01",1]],
+  epd:["EPD-mapping pass CLOSED 4.8.26 — every line that can be mapped from the file is mapped; what is left is blocked on Veidekke, not on us.","Timber (sperrer · kubbing · hanebjelker · sviller · oppforing · lekter · vindskier · innkassing) → Planed lumber and construction, m→m³ per row from its own Resource cross-section","Taktro OSB / finer → EGGER OSB-Platten, m²→m³ by board thickness","Lekter for taktro (renamed from 'Taktro av OSB / finer' via the Resource, 9 rows) → same timber EPD","Isolasjon i himling / på tak → mineral wool, m²→m³ by thickness ('2x150mm' = two layers = 300 mm)","Membranes (vindsperre · underlagspapp · dampsperre · svillemembran) → Dampsperre - typisk verdi, rull→m² from the roll size in the Resource","Svillemembran ⚠ knowingly on the dampsperre generic — no svillemembran product exists in the library, and it understates a bitumen sill strip by ~10×. Accepted as negligible (8 rows); recorded, not asked.","Gipsplater i himling → plasterboard generic","26.A01 stålplatetak · 26.E01 Lett-Tak Type 21/31/36 · 26.J06 sandwich · 26.L01 curtainwall → NO EPD, no mass (blocker)","I-bjelker (Hunton SJ60/400, Masonite H300) → NO EPD; Hunton/Masonite publish per-METRE EPDs, which fit the source metres directly (blocker)"],
+  comments:[
+    {lv:"note",st:"answered",t:"EPD MAP MARKED DONE 4.8.26, and REVIEW DONE. Every chapter-261 line that can be mapped out of the file itself now carries an EPD, all conversions are driven per row from the Resource column, and the chapter has been read through end to end. The lines still without an EPD are exactly the ones the email asks about — the six no-mass element lines and the twelve I-bjelke lines — and neither can be closed from our side. Veidekke's own status on this file is untouched.",a:"Eduard 4.8.26."},
+    {lv:"blocker",st:"open",sent:false,t:"26.O01 AND 26.O02 LOOK LIKE THE SAME ROOF ENTERED TWICE — the biggest question in the chapter, and it outranks everything else here because it can move the chapter total by ~2×. These two components plus 26.O03 hold 223 of the 233 rows, and each is a full 26-line build-up per m² rather than one element line. Compared line by line, 26.O02 is IDENTICAL to 26.O01 across all four variants (heltre t=200, heltre t=250+50, I-profil t=300, I-profil t=400) — same resources, same quantities, to the last decimal. That is 106 rows, 45 % of the chapter. It is NOT automatically an error: the component unit is m², so two roof areas of the same construction would look exactly like this. Nothing in the file distinguishes the two cases. SECOND PART of the same item: each m² also contains the CEILING (Gipsplater i himling, Isolasjon i himling 200mm, Nedlekting for himling, Dampsperresjikt) — if the ceiling is also booked in a chapter we have not received, it is counted twice. Veidekke's own Lett-Tak lines make exactly that distinction (Type 31 'Ink himling' vs Types 21/36 'Eks himling').",a:""},
+    {lv:"blocker",st:"open",sent:false,t:"SIX ELEMENT LINES WITH NO MASS — 26.A01-01 (korrugert stålplatetak H=100mm), 26.E01-01/-02/-03 (Lett-Tak Type 21 / 31 / 36), 26.J06-01 (sandwich fasadeelement 200mm) and 26.L01-01 (curtainwall). Each is 1 m² and the Resource is a PRICE line, not a material: 'STÅLKONSTRUKSJONER [225 kr]', 'Sanwichelementer mineralull levert og montert [1600 kr]', and for the curtainwall just '26'. Nothing to derive a mass from. The email carries a table of all six with their resources. For 26.E01 these are Lett-Tak Systemer elements with Protan roofing built in and Lett-Tak publish per-element EPDs, so pointing us at the right EPD per type is the fastest fix — same for the sandwich element and the curtain wall. CORRECTED 3.8.26 (Eduard): the item used to list 8 lines and ask for things we already have — Dampsperresjikt and Tekking med folie are NOT in this ask, they have EPDs and need nothing from Veidekke.",a:""},
+    {lv:"blocker",st:"open",sent:false,t:"I-BJELKER HAVE NO EPD AND NO DERIVABLE MASS — 12 lines: 'Sperretak av lettprofiler' (1.7 m), 'Kubbing mellom sperrer' (0.4 m) and 'Hanebjelke av lettprofiler' (0.2 m) on 26.O01-03/-04 and 26.O02-03/-04. The resources read 'HUNTON I-BJELKE SJ60/400 MM' and 'MASONITE I-BJELKE H300 9000MM', booked in metres. An I-joist is an OSB web with timber flanges, so it cannot be volumed from a w×h cross-section like solid timber, and these rows carry no EPD at all. Hunton and Masonite both publish EPDs declared PER METRE, which fits the source metres directly with no mass needed — the ask is to approve one of those or send kg/m per profile.",a:""},
+    {lv:"question",st:"open",sent:false,t:"CONVERSIONS — PLEASE CHECK THE RESULTS. Chapter 261 is converted PER ROW from the Resource, because in this file the resource carries the geometry and one material name can span several cross-sections: timber m→m³ via its own w×h, membranes rull→m² via the roll size, insulation m²→m³ by thickness ('2x150mm' = two layers = 300 mm), boards m²→m³ by board thickness. Every timber line goes the same way — sperrer, kubbing, hanebjelker, sviller, oppforing, lekter. The email shows one worked example per conversion type (Svill 0.22 m → 0.2 → 0.001901 m³; Taktro OSB 1.1 → 1.0 m² → 0.015 m³; Isolasjon 1.03 → 1.0 m² → 0.2 m³; Svillemembran 0.01236 → 0.012 rull → 0.0408 m²; Vindsperre 0.022 → 0.02 rull → 1.3 m²; Dampsperre 0.0275 → 0.025 rull → 1.0 m²) and every converted cell in the master carries a comment with the arithmetic.",a:""},
+    {lv:"question",st:"open",sent:false,t:"REPEATED LINES — EXPLAINED VIA COLUMN I, with ONE question left. Lines appearing 2–3× under one element are almost all real build-up: the material name repeats but the RESOURCE (their column I) does not, and the resource is what says what the line really is. Column I is now in the master next to every row ('Ressurs (kilde kol. I)') so they can verify each claim in the attached file. Svill for takverk 2× = timber sill + sill membrane; Taktro av OSB / finer 2× = OSB board + the battens beneath it; Innkassing 2× = structure + cladding; membranes ×2–3 = main area plus oppbrett/nedbrett folds. THE ONE WE CANNOT RESOLVE: 'Vindskier av tre' comes THREE times per element — GRAN 22×148, 22×173 and 22×198 — all three at exactly 0.2 m per m², which is what makes them look like width alternatives rather than three boards actually fitted. Rebuilt 3.8.26 with the column reference and a worked table of 26.O01-01 (Eduard: '26.5 you should be adding context, what column this is and probably a table').",a:""},
+    {lv:"note",st:"answered",t:"I-BJELKE GROUPING CONFIRMED, STOP ASKING (Eduard 3.8.26) — 'Sperretak/Hanebjelke av lettprofiler' and 'Kubbing mellom sperrer' really are I-joists; the resource says I-BJELKE and drives the grouping. The rename question is settled and must NOT be re-asked. Only the EPD/mass half survives, as the blocking item above.",a:"Eduard 3.8.26: 'this is correct no confusion here.'"},
+    {lv:"note",st:"answered",t:"LEKTER RENAME CONFIRMED AND EMAIL ITEM 26.2 DELETED (Eduard 3.8.26). 9 rows booked as 'Taktro av OSB / finer' whose resource reads 'G-F 30X048 LEKT/REKKE KL1' — a 30×48 batten, not a board — are renamed 'Lekter for taktro' and no question goes to Veidekke. That closed the last live part of item 26.2, so the whole item is gone: I-bjelke confirmed (§35), Lekter confirmed here, Fugemasse excluded (§34), Svillemembran ask dropped with the item. ⚠ Recorded consequence: dropping 26.2 also removed the only place we told Veidekke that svillemembran sits on the Enova dampsperre generic — a knowing understatement of ~10× on 8 rows, accepted as negligible.",a:"Eduard 3.8.26: 'dont notify this just ignore it. so note 26.2 should go away.'"},
+    {lv:"note",st:"answered",t:"FUGEMASSE EXCLUDED SILENTLY 3.8.26 — the single 'FUGEMASSE 0,31 LTR TUBE' row riding inside the Tyvek undertak line. Dropped with musebånd / RADONBRØNN / laftestrimmel, listed in the build log, and deliberately NOT raised with Veidekke.",a:""},
+    {lv:"note",st:"answered",t:"SVINN CORRECTION 31.7 — this chapter WAS carrying Veidekke's waste after all. We had recorded 'no Svinn column identifiable; col 23 duplicates the quantity' — wrong: col W ('Svinn', row 5, same place as 252) holds a real % (10 on most rows, 3 on svillemembran, 1 on element lines), and only 9 of 233 rows mirror the quantity. The quantities reconstruct to clean geometry when divided: 0.22 m → 0.2, taktro 1.1 m² → 1.0 per m², svillemembran 0.01236 → 0.012 rull. Now stripped in if_differs mode (mirror rows kept + reported); all converted ch-261 volumes shrink ~10 %. Email 26.4 rewritten as a correction asking Veidekke to confirm the quantities were gross.",a:"Caught 31.7 while preparing verification pointers for Eduard."},
+    {lv:"note",st:"answered",t:"Validation target met (234 in-scope rows, 15 element IDs).",a:""}]},
+
+ {f:"213&216-I_ferdig.xlsx",ch:"216 / 213",b:"I",v:"D",r:"D",m:"D",scope:138,fmt:"Shifted layout (custom map)",
+  groups:[["21.H03",63],["21.H05",27],["21.H02",20],["21.H01",12],["21.H08",12],["21.I05",4]],
+  epd:["Armering med kamstenger → K1GLOoaSiXFa6AUukxY7","Isolering XPS 300 SL → frbmxcvvxYwz9LwYyN1h","Plasstøpt betong → sy0z9WpGr2zoNwIGfNDy"],
+  comments:[
+    {lv:"note",st:"answered",t:"Merged into the master. Data columns were shifted (qty in col R, unit in col X) — handled with a custom column map. Chapter 216 (+ a few 213 rows).",a:""},
+    {lv:"confirm",st:"answered",t:"XPS insulation changed to m³ (m² × thickness).",a:"OK — same as 21-T."},
+    {lv:"note",st:"answered",t:"EPDs: rebar K1GLOoaSiXFa6AUukxY7 (shared with 21); XPS 300 SL frbmxcvvxYwz9LwYyN1h; concrete sy0z9WpGr2zoNwIGfNDy.",a:""},
+    {lv:"question",st:"open",sent:false,t:"Concrete EPD: using the generic low-carbon EPD (sy0z9WpGr2zoNwIGfNDy) for the concretes here (incl. watertight). The file spec reads B45 but Tollef said B40 (low-carbon 20) — confusion? Confirm the class or find a specific watertight-concrete EPD.",a:""},
+    {lv:"question",st:"open",sent:false,t:"XPS 300 SL EPD: used frbmxcvvxYwz9LwYyN1h (standard, brand Sunde AS / Sundolitt?). Ask Veidekke to confirm or provide a specific brand if they want.",a:""},
+    {lv:"note",st:"answered",t:"DESCRIPTION RECOVERED 29.7.26 — this is one of the three files Veidekke filtered at UNDERPOST level, so its source col I was empty on every one of the 138 rows. We now read the article text off the child ressurs rows (text only — they stay out of scope, no quantity is taken). Coverage 0 → 138 of 138, and it is now visible in the 'Ressurs' column of Reduzer Import.",a:""}]},
+
+ {f:"222-I_TestTilReduzer2.xlsx",ch:"222",b:"I",v:"O",r:"O",m:"O",scope:265,fmt:"Shifted 38-col (custom map)",
+  groups:[["22.C05",53],["22.D02",40],["22.D06",40],["22.D01",36],["22.D03",36],["22.D04",28],["22.D05",28]],
+  epd:["MERGED 29.7.26 into code 22 alongside 223 — 351 rows, collapsed to 14 EPD groups.","Armering med kamstenger → K1GLOoaSiXFa6AUukxY7 ✎","Plasstøpt betong (søyle, B30/B35) → VbO0KK4RWrCnZozTTMAp ✎","Prefab betongsøyle → nWvJeZ8vLceni1P4YADY (Veidekke Prefab 'Bjelke og søyler') + m→m³ from the section in the name","Limtresøyle gran + TMF imp → jhD8gIhgzReaFxVRr2d1 + m→m³ from the section in the name ✎","Søyler av runde + firkantformede hulprofiler (HUP, 10 rows) → 5rLi0Tg514sCpVWsmVRU (Enova 'Structural steel, hollow profile', 3.62 kgCO₂e/kg) — MOVED 3.8.26 off the rolled-section dataset, same switch as the 223 oppsveist beams ✎","Fotplater / Søyletopper → no EPD (stk, no mass)","Surface treatment, fire protection, listverk, Sika CarboDur → no EPD"],
+  comments:[
+    {lv:"blocker",st:"waiting",sent:true,t:"⏸ ON HOLD — ON VEIDEKKE'S SIDE (Eduard 3.8.26). Nothing further happens on this chapter until they answer the wrong-file question below. The 265 visible rows stay merged into code 22 meanwhile, but no new mapping work is being done here and no further questions are going out.",a:"Waiting on Veidekke.",aw:true},
+    {lv:"note",st:"answered",t:"IN-SCOPE COUNT 351 → 265 (3.8.26). 86 rows whose original Mengde is 0 are now excluded everywhere (Eduard's rule) — in this file that is almost all the surface treatment and fire protection: 'Malebehandling, grunning og 2 strøk beis' (52 rows), 'Brannmaling 4.sider R60/R90', 'Varmforsinking.', 'Brannisolering 4.sider.R90'. This supersedes the old question about whether those lines were meant to be empty as far as OUR side is concerned — they simply carry no material.",a:""},
+    {lv:"blocker",st:"open",sent:false,t:"THE ONLY 222 ITEM IN THE EMAIL (31.7): we believe this is not the file Veidekke meant to send — it is named 'TestTilReduzer2' where every other delivery is 'klartilgjennomgang', the full unfiltered 39 952-row sheet is still inside, working columns 21–25 hold #VALUE!/#N/A, and it ends with an empty 'ID Reduzer' column. Asked them to check and send the clean version if one exists — we then redo the chapter on it. The merge of the 351 visible rows stands meanwhile.",a:"If they reply that this IS the right file, Eduard goes through the chapter personally and formulates the detailed questions then — the drafted ones are archived in 05_email/archive_222_questions.html and shown below as WAITING.",aw:true},
+    {lv:"note",st:"answered",t:"⚠ WE WERE WRONG ABOUT THIS FILE, AND IT IS NOW MERGED. We had it recorded as 'wrongly formatted and unfiltered' and had pulled it out of the master. That claim did not survive being checked: 351 of the 39 952 rows are visible, every one of them has Fjernes = 'Nei', NS3451 reads 222 on all 351, and the quantities are clean geometry (a 200×1000 mm column is exactly 0.2 m³/m, rebar 60 kg/m). Veidekke HAD filtered it correctly. What made it look incoherent is five extra working columns (21–25: 'Lag til selv', mm2, m2, m3, Benevning, several full of #VALUE!/#N/A) plus an empty 'ID Reduzer' column at 38, which pushes the sheet to 38 columns and moves the quantity column.",a:"Caught 29.7.26 while writing the email — before telling Veidekke their export was unfiltered."},
+    {lv:"note",st:"answered",t:"COLMAP: component=5, material=7, resource=9, qty=28, unit=29, elementid=33, compunit=34, ns3451=35, fjernes=37. ⚠ qty is col 28, NOT col 18 — col 18 is the same count column that gave the wrong volumes in 223. Verified 351/351 numeric in col 28 with sensible units in col 29. Master went 1 183 → 1 534 rows; the code-22 import file 171 → 522 rows.",a:""},
+    {lv:"question",st:"waiting",sent:false,t:"Was someone mid-way through a calculation in columns 21–25? Several cells there are #VALUE! / #N/A, so if that work matters it is not coming through to us. And did you intend to fill in the 'ID Reduzer' column yourselves? It is present but completely empty — if you would rather assign EPDs in your own file that is fine, we just need to know so we do not duplicate the work.",a:"ON HOLD 31.7 — not sent; only the wrong-file question is in the email. If Veidekke confirms this IS the right file, Eduard reviews the chapter personally and reformulates these (draft archived in 05_email/archive_222_questions.html).",aw:true},
+    {lv:"blocker",st:"waiting",sent:false,t:"'Fotplater (Enkle innstøpingsplater)' and 'Søyletopper (Doble plater)' are steel plates booked in stk (0.88 and 2.67 total) with no weight, and every steel EPD is per kg. Same problem as the 223 Gitterdrager. Need kg per plate. ('Supplerende komponenter' is already in kg, 8 kg.)",a:"ON HOLD 31.7 — not sent; only the wrong-file question is in the email. If Veidekke confirms this IS the right file, Eduard reviews the chapter personally and reformulates these (draft archived in 05_email/archive_222_questions.html).",aw:true},
+    {lv:"blocker",st:"waiting",sent:false,t:"MOST OF THE SURFACE TREATMENT AND FIRE PROTECTION HAS QUANTITY 0, so it contributes nothing as the file stands: 'Malebehandling, grunning og 2 strøk beis' (52 rows, total 0), 'Brannmaling 4.sider R60' and 'R90' (0), 'Varmforsinking.' (0), 'Brannisolering 4.sider R90' (0). Only 'Brannisolering 4.sider R60' carries a number (7 m). Are the zero lines meant to be empty? And if they should count we need a paint and a fire-protection EPD PLUS a spreading rate — a length of painted column cannot be converted on its own.",a:"ON HOLD 31.7 — not sent; only the wrong-file question is in the email. If Veidekke confirms this IS the right file, Eduard reviews the chapter personally and reformulates these (draft archived in 05_email/archive_222_questions.html).",aw:true},
+    {lv:"note",st:"answered",t:"HUP COLUMNS RESOLVED WITHOUT ASKING (Eduard 3.8.26) — this was one of the drafted 222 questions and it no longer needs Veidekke. Søyler av firkantformede hulprofiler (306 kg, 8 rows) and runde hulprofiler (221 kg, 2 rows) were on the Enova 'Konstruksjonsstål, valseprofil' dataset (1.5 kgCO₂e/kg) under the one-EPD-for-steel-in-kg rule, but they are HOLLOW SECTIONS. They now sit on Enova 'Structural steel, hollow profile - typical value' (5rLi0Tg514sCpVWsmVRU, 3.62 kgCO₂e/kg, per kg) — the same switch applied to the 223 HSQ beams, 13 rows in the job in total, ≈2.4× on A1-3. Quantities are already in kg, so only the id changed. Note the email tells Veidekke about this in the 223 section, not here: the 222 section carries ONLY the wrong-file item, so the notice reaches them through 223.",a:"Eduard 3.8.26 picked the Enova generic over the Norsk Stål producer EPD (3.2 kgCO₂e/kg) that we had nominated on 29.7."},
+    {lv:"question",st:"waiting",sent:false,t:"Prefab betongsøyle and Limtresøyle are booked as 1 m of column, and both target EPDs are per m³, so we CONVERTED m → m³ using the cross-section in the material NAME (in 222 the geometry is in the name, not the resource): Ø=350 mm → π/4 × 0.35² = 0.096211 m³/m; 300x300 → 0.09; Limtresøyle 115X225 → 0.025875. Confirm we may take the section from the name.",a:"ON HOLD 31.7 — not sent; only the wrong-file question is in the email. If Veidekke confirms this IS the right file, Eduard reviews the chapter personally and reformulates these (draft archived in 05_email/archive_222_questions.html).",aw:true},
+    {lv:"question",st:"waiting",sent:false,t:"LIKELY TYPO IN THE SOURCE: one line reads 'Limtresøyle 15X450 mm gran', which we believe should be 115x450. Read literally it gives 0.00675 m³/m instead of 0.05175. We did NOT silently correct it — please fix at source and we re-run.",a:"ON HOLD 31.7 — not sent; only the wrong-file question is in the email. If Veidekke confirms this IS the right file, Eduard reviews the chapter personally and reformulates these (draft archived in 05_email/archive_222_questions.html).",aw:true},
+    {lv:"question",st:"waiting",sent:false,t:"A group of interior trim sits in this bæresystem chapter — Gulvlist furu/eik, Taklist furu, Gran 22 mm kledning, Furu 21 mm glattkant list, Rustfri hjørnebeslag 50x50mm — each 1 m with no cross-section, so not convertible to a volume anyway. Should these be in 222 at all? Same question for the single 'Sika CarboDur M 1214' carbon-fibre strip (1 lm) — if real, we need the Sika EPD.",a:"ON HOLD 31.7 — not sent; only the wrong-file question is in the email. If Veidekke confirms this IS the right file, Eduard reviews the chapter personally and reformulates these (draft archived in 05_email/archive_222_questions.html).",aw:true},
+    {lv:"note",st:"answered",t:"Earlier note kept for the record: the first file we received for this chapter contained only the wooden columns. That is a separate matter from the formatting question above, and is now moot since this export is complete.",a:""}]},
+
+ {f:"223-T_klartilgjennomgang.xlsx",ch:"223",b:"T",v:"D",r:"D",m:"D",scope:171,fmt:"Shifted layout (custom map)",
+  groups:[["22.A01",44],["22.A02",16],["22.B01",12],["22.D12",10],["22.D07",9],["22.E02",2]],
+  epd:["Grouped into 9 EPD groups (Unique Products collapsed).","Armering med kamstenger → K1GLOoaSiXFa6AUukxY7 — Enova generic 'Reinforcing steel', NOT Celsa ✎ re-evaluate","Limtre (gran) → jhD8gIhgzReaFxVRr2d1","Limtre imp (TMF furu) → jhD8gIhgzReaFxVRr2d1 (same EPD ✎)","Plasstøpt betong B35 M45 → VbO0KK4RWrCnZozTTMAp","Bjelker av valseprofiler · Egendefinert fagverk · Stålvinkel for tegl → oExEpskhCC2hy871fWQZ (Enova 'Konstruksjonsstål, valseprofil', 1.5 kgCO₂e/kg, per kg)","Bjelker oppsveist av profiler/plater (HSQ, 3 lines / 273 kg) → 5rLi0Tg514sCpVWsmVRU (Enova 'Structural steel, hollow profile', 3.62 kgCO₂e/kg, per kg) — MOVED 3.8.26 off the rolled-section dataset ✎","Prefab betongbjelke → nWvJeZ8vLceni1P4YADY (Veidekke Prefab 'Bjelke og søyler, Lavkarbonklasse A', 2500 kg/m³) ✎","Gitterdrager (4 × 1 stk) → no EPD — no mass behind the lines (blocker)"],
+  comments:[
+    {lv:"note",st:"answered",t:"🔒 LOCKED 31.7 (Eduard) — the 223 email section is reviewed and final; no further edits. Still pending from outside: Herman's steel EPDs (Gitterdrager / Egendefinert fagverk / Stålvinkel) and Veidekke's answers to the sent items.",a:""},
+    {lv:"note",st:"answered",t:"Merged into the master: 171 in-scope rows, collapsed to 9 EPD groups in Unique Products (one row per group, uniform fill, storing how we grouped). Data columns were shifted (qty col R, unit col X) — custom map used.",a:""},
+    {lv:"note",st:"answered",t:"EPDs assigned: rebar (Armering med kamstenger) → K1GLOoaSiXFa6AUukxY7; Limtre gran + Limtre imp → jhD8gIhgzReaFxVRr2d1; Plasstøpt betong B35 M45 (bjelke + søyle) → VbO0KK4RWrCnZozTTMAp.",a:""},
+    {lv:"question",st:"open",sent:false,t:"Rebar EPD needs re-evaluating (27 Jul). K1GLOoaSiXFa6AUukxY7 is Enova's generic 'Reinforcing steel - typical value', not a Celsa product EPD as we'd noted. Kept for now — send your supplier's rebar EPD and we swap it in.",a:""},
+    {lv:"confirm",st:"answered",t:"The two Limtre (glulam) sets differ because one is impregnated (TMF imp furu, outdoor) and the other is not (gran) — correct?",a:"That is correct."},
+    {lv:"question",st:"open",sent:false,t:"Limtre WARNING: the same glulam EPD (jhD8gIhgzReaFxVRr2d1) is used for BOTH regular limtre (gran) and impregnated limtre (TMF imp furu). The impregnated-pine variant is not separately represented — ask Veidekke whether they want a dedicated EPD for it.",a:""},
+    {lv:"question",st:"open",sent:false,t:"PREFAB BETONGBJELKE NOW MAPPED — to Veidekke's OWN plant: 'Bjelke og søyler, Lavkarbonklasse A' (Veidekke Prefab AS, nWvJeZ8vLceni1P4YADY, 2500 kg/m³). Lavkarbonklasse A matches the low-carbon 20 default we use for the cast-in-place concrete; the 'Lavkarbonklasse Pluss' variant of the same EPD is only 1.7 % lower and we chose A for consistency. Email asks [Confirm Lavkarbonklasse A]. This supersedes the earlier 'no EPD yet' note.",a:""},
+    {lv:"question",st:"waiting",aw:true,t:"MISSING EPDs — the steel groups Bjelker, Gitterdrager (22.E02/E03), Egendefinert fagverk and Stålvinkel have no EPD assigned. ASK HERMAN (Veidekke) which EPD he thinks best suits each of these steel items.",a:"Largely resolved by 3.8.26 — Bjelker av valseprofiler, Egendefinert fagverk and Stålvinkel are all on the Enova rolled-section dataset, and the oppsveist beams moved to the hollow-profile one. GITTERDRAGER IS THE ONLY ONE LEFT, and it is not an EPD problem: those four lines have no mass at all, so Herman's call cannot help until Veidekke says what a truss weighs.",aw:true},
+    {lv:"note",st:"answered",t:"STEEL EPD ASSIGNED 29.7.26 — 'Bjelker av valseprofiler' → oExEpskhCC2hy871fWQZ, Enova 'Konstruksjonsstål, valseprofil – typisk verdi' (1.5 kgCO₂e/kg, declared per kg, classified Steel profiles I/U/H/L/T, use case Support system). 'Valseprofil' is the exact word in the source line and the quantity is already in kg, so nothing is converted. Eduard supplied the id and it verified exactly. NOTE it is an Enova generic average, not a producer EPD — producer alternatives in the library are Skanska AS Stålfabrikken 'Steel beams I, H, U, L and T' (1.04) and Peiner Träger 'Structural Steel - Beams and Sections' (0.688).",a:"Eduard 29.7."},
+    {lv:"note",st:"answered",t:"NEAR-MISS WORTH RECORDING: the Enova dataset whose name looks like the obvious match — 'Thin steel profile (I, U, H, L, T) - typical value' (2.08 kgCO₂e/kg) — is TYNNplateprofil, i.e. cold-formed sheet, NOT rolled sections. Wrong family for beams; it is the right family for the 232 steel studs.",a:""},
+    {lv:"question",st:"open",sent:false,t:"BJELKER OPPSVEIST MOVED TO THE HOLLOW-PROFILE EPD (Eduard 3.8.26) — and this is the item the email flags loudest, because it MORE THAN DOUBLES the factor on those lines. The 3 'Bjelker oppsveist av profiler/plater' lines (273 kg) leave Enova 'Konstruksjonsstål, valseprofil' (1.5 kgCO₂e/kg) for Enova 'Structural steel, hollow profile - typical value' (5rLi0Tg514sCpVWsmVRU, 3.62 kgCO₂e/kg, per kg, 7850 kg/m³, 20 % recycled, valid to 2029). The reason is in the recovered source text: the resource reads 'STÅLKONSTRUKSJONER HSQ Bjelker levert og montert' and the components read 'Hatteprofil m/feste til prefab.vegg' and 'Stålbjelker DELTA 80 kg/m' — HSQ is a closed box section, not a rolled profile. Quantities are already in kg and the new EPD is per kg, so only the id changed. THE SAME EPD NOW COVERS EVERY HOLLOW SECTION IN THE JOB — the 222 runde and firkantformede hulprofiler (10 rows) move with it, 13 rows in total. Email says plainly that we are telling them rather than just doing it, and offers the named-supplier alternative 'Hot-formed hollow profile' (Norsk Stål AS, 3.2 kgCO₂e/kg). Left on the rolled-section EPD deliberately: valseprofiler, Egendefinert fagverk, Stålvinkel, plates.",a:"Eduard 3.8.26 chose the Enova generic over the Norsk Stål producer EPD, consistent with the one-generic-per-family pattern used for the rebar and the leveling compound."},
+    {lv:"blocker",st:"open",sent:false,t:"GITTERDRAGER LINES HAVE NO MATERIAL BEHIND THEM. All four (22.E02-01/02, 22.E03-01/02) are booked as 1 stk, and their hidden resource rows read 'STÅLKONSTRUKSJONER' with 45 kr — a PRICE, not a mass. So there is genuinely nothing to convert. Eduard's reading (31.7): the two 'Egendefinert fagverk. Grunnet m/primer' lines — 22.E01-01 (600 kg, 'Gitterdragere c/c 2,4 m med spennvidde 12 m, ca. 50 kg/m') and 22.E01-02 (850 kg, c/c 1,2 m spennvidde 17 m) — look like the DEFINITION of these trusses, with the four 1-stk lines as variants/instances of it. Asked Veidekke: are 22.E01-01, 22.E02-01 and 22.E03-01 (and their -02 siblings) part of the same definition? If yes, the stk lines are removed (the mass is already in the kg lines); if not, we need kg per truss.",a:""},
+    {lv:"note",st:"answered",t:"STEEL EPD CANDIDATES — SETTLED 3.8.26, kept here for the record. Egendefinert fagverk 'Grunnet m/primer' and Stålvinkel (49.5 kg) both went onto the Enova valseprofil dataset rather than the closer-looking producer EPDs we had shortlisted ('Welded and surface treated steel structures made of EAF steel', SIA BELMAST, 1.0 kgCO₂e/kg; 'General truss', Overhalla Mekaniske, 2.55 kgCO₂e/kg) — a 200×200 mm angle is just a hot-rolled L-section, and the one-generic-per-family rule applies. Those candidates are no longer put to Veidekke; the email asks only for their fabricator's EPD if they have one. ⚠ ONE THING THE GENERIC DOES NOT COVER: the Stålvinkel's child rows include 'STÅLKONSTRUKSJONER Tillegg Varmforzinking' — it is HOT-DIP GALVANISED, and the plain steel EPD carries none of that.",a:""},
+    {lv:"question",st:"answered",t:"The last element (Stålvinkel for tegl, 23.E02-03) had two near-identical rows; the last one looked misplaced.",a:"Confirmed misplaced — removed src 14684; kept the single 49.5 kg line."},
+    {lv:"note",st:"answered",t:"QUANTITY FIX (27 Jul) — we were reading the wrong column. In this shifted layout the unit in col 24 belongs to the quantity in col 23, but our column map read col 18: a count column that merely equals it on most rows. It differed on 91 of the 171 in-scope rows — every Prefab betongbjelke and Limtre line read exactly '1 m³' instead of its real volume (a 200×300 mm prefab beam is 0.06 m³/m, and a 115×115 mm glulam beam of 1 m³ would be 75 m long). Now reading col 23: the rectangular prefab beams total 2.03 m³ instead of 34. Same fix applied to 213&216 and 251, where the two columns happen to be identical on every in-scope row.",a:""}]},
+
+ {f:"231-T_klartilgjennomgang.xlsx",ch:"231",b:"T",v:"P",r:"D",m:"H",scope:75,fmt:"Standard 32-col",
+  groups:[["23.B01",16],["23.A01",14],["23.D06",13],["23.A10",10],["23.D05",9]],
+  epd:["Merged 28.7.26, Leca reworked 3.8.26. Eduard reviewed rows 2–620 of the import on 29.7.","Plasstøpt betong (B30/B35 vegg + konsoll) → VbO0KK4RWrCnZozTTMAp ✎","Armering med kamstenger → K1GLOoaSiXFa6AUukxY7 ✎ re-evaluate","Massivtre veggelement → HfcN24gVKzao1VbfT9wD ✎ generic solid wood","Utlekting bakvegg 36×98 imp → wmm9dv0GUECXP3y7HQnV","Leca blokkvegg 150 mm → FSCAy2JTVN4qnQsRpYr2 (Leca® Universalblokk 15 cm) · booked as 1 m² of wall","Leca blokkvegg 200 mm → Ax8Hd0rXA09m4P8I69xk (Universalblokk 20 cm) · 1 m²","Leca blokkvegg 250 mm → 03ThxJk62ljXgbYZuzGM (Universalblokk 25 cm) · 1 m²","Leca blokkvegg 300 mm Isoblokk → 03ThxJk62ljXgbYZuzGM (the 25 cm dataset again — no 30 cm block in the library) ✎","Murmørtel/pussmørtel (Weber KC35/65) → rQkvHkbR74Wt0aLbo2ii (Enova 'Plaster mortar', per kg) — replaces the M5 stand-in","Fugearmering 18 mm × 4 m → K1GLOoaSiXFa6AUukxY7, stk → m³ from the Ø and length in the resource","Skallvegg (prefab betong) → C8lhsdUgnH7jj0DxQGtt (Con-Form 'Shell wall (Orkanger)', per m²)","Isolasjon i skallvegg (EPS, DERIVED line) → K0zyslsOAL5lxofh0a4i","Isolasjon ved teglkonsoll (XPS) → OYvuKLsimyPXkrQt26gl","REDAir FLEX → OSohhsixH6MxacvOneZw (ROCKWOOL Redair Batts, per m³)","Isolasjon ved teglkonsoll (steinull) → 8mYjCUJ35vBBNSPlmgDy (m³→kg at 140 kg/m³)","Leca u-blokk · u-blokkarmering · Weber B20 tørrbetong → EXCLUDED 3.8.26","Isolerte fasadeelementer prefab betong (23.G05) → no EPD, no mass"],
+  comments:[
+    {lv:"note",st:"answered",t:"MERGED 28.7.26 — 84 in-scope rows, collapsed to 15 EPD groups. Everything mapped reuses an id already approved for the same physical product in an earlier chapter; anything needing a genuinely new decision was left blank with a note.",a:""},
+    {lv:"note",st:"answered",t:"DESCRIPTION COLUMN ADDED 29.7.26 (Eduard asked why the import sheet showed only a bare product name). The article name lives in source column I, and this file leaves the RESSURS rows visible so it was already there — it just was not surfaced. Reduzer Import now carries Ressurs / EPD-gruppe / Status / Merknad / SourceFile / SourceRow, appended after the template's last column so the file stays importable.",a:""},
+    {lv:"note",st:"answered",t:"LECA WALLS REWORKED 3.8.26 (Eduard) — this replaces the 31.7 'one EPD for every block type' merge. ONE EPD PER THICKNESS: Universalblokk 15 cm (FSCAy2JTVN4qnQsRpYr2), 20 cm (Ax8Hd0rXA09m4P8I69xk), 25 cm (03ThxJk62ljXgbYZuzGM), and the 300 mm Isoblokk on the 25 cm dataset because the library has no 30 cm block. QUANTITY IS NOW 1 m² OF WALL, not a volume: these datasets carry a kg/m² (15 cm → 705 kg/m³ × 0.15 = 105.75 kg/m², exactly what the EPD declares), so the m² already encodes the thickness. Converted stk → m² of wall from the block face in the Resource; 8 × (0.25 × 0.50) = 1.00 m²/m² and the Isoblokk 10 × (0.20 × 0.50) = 1.00 m² — landing exactly on 1.00 is what validates the block counts. 23.B01 goes 25 → 16 rows.",a:"Eduard 3.8.26: 'Use 1 m² for normal.'"},
+    {lv:"note",st:"answered",t:"U-BLOKK DROPPED IN FULL 3.8.26 (Eduard) — the u-block itself, the 'LECA U-BLOKKARMERING 4M' and the 'WEBER B20 TØRRBETONG 25KG' that sits between them. All three share the material name 'Leca u-blokk NNNmm', so one material rule takes all 9 rows across 23.B01-01/02/03. This retires the old 'send a kg→m³ density for the tørrbetong' question.",a:"Eduard 3.8.26: 'ignore everything for the u-block including the U block rebar and the U block mortar that goes in between those two inventories.'"},
+    {lv:"question",st:"open",sent:false,t:"PUSSMØRTEL — THE ONE OPEN QUESTION ON THESE WALLS. Eduard chose to KEEP both Weber KC35/65 lines (bedding mortar 3.75–5.5 kg/m² and the separate Slemming render 7.5 kg/m²) rather than drop them with the other Leca accessories, and moved them off the weber Murmørtel M5 stand-in onto 'Plaster mortar - typical value' (Enova, rQkvHkbR74Wt0aLbo2ii, per kg — no conversion needed). Email asks Veidekke whether that is fine: if the Leca per-m² EPD already represents the finished walling including its mortar, keeping these rows double-counts it and we take them out.",a:"Eduard 3.8.26: 'don't exclude the pussmørtel and ask them if it's fine.'"},
+    {lv:"question",st:"open",sent:false,t:"FUGEARMERING — now mapped, sanity-check pending. 'FUGEARMERING 18MMX4M' is converted stk → m³ from the geometry in its own resource name: π × (0.018/2)² × 4 = 0.0010179 m³ per piece (≈8 kg), 1.0 stk/m² net of svinn, on the Enova rebar EPD (K1GLOoaSiXFa6AUukxY7). m³ is a valid input unit because that dataset carries a density (7850 kg/m³). ⚠ ≈8 kg of steel per m² of Leca wall is heavy for bed-joint reinforcement — the email asks Veidekke to confirm the 18 mm is a bar diameter and not a strip width.",a:"Eduard 3.8.26: 'convert rebar with the length and its diameter you are given in the description, then use m³.'"},
+    {lv:"question",st:"open",sent:false,t:"REDAir FLEX — this IS insulation: ROCKWOOL REDAir FLEX, a rigid stone-wool ventilated-facade board (Resource 'REDAIR PLATE 100/150/200/250X600X1000'). We converted it m²→m³ by thickness. The timber battens in the same component ('Utlekting bakvegg Tre m/36x98 imp') are a SEPARATE line already on the timber EPD; the screws and fixings are Fjernes=Ja. Candidate EPD: ROCKWOOL Redair Batts Nordics (OSohhsixH6MxacvOneZw, per m³, 31.2 kgCO₂e/m³). Do NOT use the 'REDAir FLEX system' EPD — it includes the wood sub-construction and would double-count the battens.",a:""},
+    {lv:"question",st:"open",sent:false,t:"ISOLERING VED TEGLKONSOLL — the name never says which insulation but the Resource does, and it is TWO DIFFERENT MATERIALS: one row is 'MARKPLATE 50X600X1200 ROCKWOOL' (stone wool), the other 'XPS 250 SL 100x585x2385' (XPS). Split accordingly, and both are now ASSIGNED: the XPS row on the XPS 250 SL EPD already approved in 21X, the stone-wool row on 'Stone wool, ground board' (Boverket, 8mYjCUJ35vBBNSPlmgDy), converted m³→kg at 140 kg/m³ because that EPD is declared per kg. Email asks them to confirm both choices.",a:""},
+    {lv:"blocker",st:"open",sent:false,t:"THICKNESS DISCREPANCY, possibly a factor 2 — 'Isolering 100mm mellom yttervegg og teglkonsoll': the name says 100 mm, the Resource says the plate is 50 mm, and the quantity is 2 m² per m². Two 50 mm layers = 0.1 m³; our thickness-from-the-name rule gives 0.2 m³. The 50 mm reading is the physically consistent one. NOT changed yet — confirm the build-up and we halve the row. It is the SAME PATTERN as the REDAir component in this file, where 'REDAir FLEX-300mm' is booked as 2 m² of the 150 mm board and the volume comes out right — which is what makes the double-count reading likely here. In the email this sits inside one teglkonsoll item together with the two-material split and the 1.10 → 1.00 m² svinn reading, so Veidekke answers all three in one place.",a:""},
+    {lv:"blocker",st:"open",sent:false,t:"ISOLERTE FASADEELEMENTER I PREFAB BETONG (23.G05, liggende / stående / brystninger, 450 mm) — 1 m² each, Resource completely empty, no mass. We need ONE of three things: (a) a per-m² prefab facade-element EPD, (b) the manufacturer/plant so we can look it up (if it is Veidekke Prefab we may already have it), or (c) a split into materials — m³ concrete, kg rebar, m³ insulation per m². Any of the three unblocks it; (c) is most accurate.",a:""},
+    {lv:"question",st:"open",sent:false,t:"SKALLVEGG — SOLVED 3.8.26, dropped from BLOCKING to a confirm. We found a real product EPD for exactly this: 'Shell wall (Orkanger)' (Con-Form Group AS, C8lhsdUgnH7jj0DxQGtt, 37.2 kgCO₂e/m², declared per m²), whose own description reads 'shell walls produced in the factory in 250 mm layers that form the outer parts of the complete wall'. THREE INDEPENDENT CHECKS, all from Veidekke's own file, say it is the right product: (1) each skallvegg row is paired with its own cast-in-place infill line of exactly wall thickness minus 100 mm (0.1 m³ at t=200, 0.15 at t=250, 0.2 at t=300), so this line is the two 50 mm shells and nothing else; (2) those shells at 2500 kg/m³ come to 250 kg/m² against the EPD's declared 247.96 kg/m² — 0.8 % apart; (3) their resource says 'armering 10,5 kg/m2' and the EPD is 4.38 % metal = 10.9 kg/m², so the reinforcement is ALREADY INSIDE the EPD and we deliberately did NOT add a separate rebar line. ONE THING WE COULD NOT VERIFY: we reduced 1.07 → 1.00 m² per m², reading the 1.07 as 1.00 plus 7 % waste — on these rows the Svinn column just repeats the quantity (1,07 against 1,07) instead of holding a percentage, so there was nothing to check it against. Email asks them to confirm the EPD and the 1.07 reading.",a:""},
+    {lv:"question",st:"open",sent:false,t:"WE ADDED A LINE THAT IS NOT IN VEIDEKKE'S FILE (3.8.26) — the EPS insulation in the two 'Skallvegg isolert' elements. 23.A10-02 and 23.A10-05 book the precast shells and the cast-in-place infill but NO insulation at all, even though the component description reads 't = 200mm + 200mm isolasjon'. So it was simply missing from their model. We added it as its own line at 1 m² × 200 mm = 0.2 m³ per m² of wall, on 'EPS - typisk verdi' (Enova, K0zyslsOAL5lxofh0a4i, 71 kgCO₂e/m³, per m³, density 16 kg/m³). TWO ASSUMPTIONS, because the description says only 'isolasjon': that it is EPS and not mineral wool or XPS, and that 200 mm across the full wall area is the right reading of 't = 200mm + 200mm isolasjon'. Both are in the email as confirms.",a:""},
+    {lv:"note",st:"answered",t:"WEBER B20 TØRRBETONG and LECA U-BLOKKARMERING questions RETIRED 3.8.26 — both rows are part of the u-blokk build-up, which is now excluded entirely. Only FUGEARMERING survived, and it is mapped (see above).",a:""},
+    {lv:"question",st:"open",sent:false,t:"Cast-in-place wall concrete: all four classes in 231 (B35 M45 / B30 M60 / B35 M60 / konsoll) are merged onto one 'Low carbon 20 B35' EPD. Confirm the classes may share one EPD, and that B30 M60 is acceptable on B35.",a:"Eduard 3.8.26: the col-23 svinn question was deleted from this item — it is no longer asked."},
+    {lv:"note",st:"answered",t:"TEGLKONSOLL XPS ROW 1.1 → 1.0 m² (3.8.26). 23.E02-02 'Isolering 100mm mellom yttervegg og teglkonsoll' (XPS 250 SL) was booked at 1.1 m² with its Svinn column EMPTY, so the conditional strip could not see the uplift. New FORCE_SVINN rule — matched on file + material + resource, only fires when the Svinn column gave nothing, every hit listed in the build log. The row is now 1.0 m² → 0.1 m³ at 100 mm; the email asks Veidekke to confirm the reading.",a:"Eduard 3.8.26: 'the original value is 1.1 m2, without waste it should be 1.'"}]},
+
+ {f:"232-T_klartilgjennomgang.xlsx",ch:"232",b:"T",v:"P",r:"D",m:"H",scope:248,fmt:"Standard 32-col",
+  groups:[["23.C01",69],["23.E01",40],["23.C02",35],["23.F05",21],["23.C04",21]],
+  epd:["Merged 28.7.26, collapsed to 24 EPD groups. Eduard reviewed to import row 620 on 29.7; rows 620+ still to review.","Bindingsverk av tre / utlekting / trekledning → wmm9dv0GUECXP3y7HQnV (m→m³ from each row's own Resource)","Isolering av vegg → gtARrQEraEfBp2DXC00h ⚠ likely WRONG — exact ROCKWOOL match found, see comments","Gipsplate standard + Vindsperre GU9 → o3K2bFE1U48w6RhqaDns","Dampsperresjikt av plast → Rav7AiFN6R7yCDsL7pTk","Finer/OSB underlag → y56Egje4h2hBRLoIJJDA","Grunnmursplate XPS → frbmxcvvxYwz9LwYyN1h","Murmørtel → s3D912srASkmWqZiMtvU ✎","Bindingsverk av stål tynnplateprofiler → cXU298TKhfQKCeNiz1q1 (Enova tynn stålprofil) · lm→kg APPLIED 3.8.26 from Eduard's kg/m table","Beslag / Sokkelbeslag → candidate VdbiTqEYrmgTUVllW3Rn (Alsvåg, colour-coated sheet) + m²→kg at 4.71","Grunnmursplate EPS · Platon/knotteplast · Teglforblending · the whole cladding menu → no EPD","Musebånd → EXCLUDED 31.7 (confirm with Veidekke)","Glava laftestrimmel → EXCLUDED 3.8.26 (17 rows)","Rows with quantity 0 → EXCLUDED 3.8.26 (all files)"],
+  comments:[
+    {lv:"note",st:"answered",t:"MERGED 28.7.26 — 300 in-scope rows, collapsed to 24 EPD groups. Timber is converted m→m³ from the cross-section in each row's own Resource (GRAN 48×98/148/198/248, FURU 36×098 CUIMP), same method as chapter 26; no extra c/c factor, because the linear metres per m² already contain the spacing.",a:""},
+    {lv:"question",st:"open",sent:false,t:"ISOLERING AV VEGG — Eduard asked whether the EPD is right. OUR ANSWER: probably not. The Resources read 'FLEXI A-PLATE … MOSS' and '… TRD', which are ROCKWOOL's Moss and Trondheim plants — so this is ROCKWOOL stone wool, not the Glava glass wool we assumed. The library holds the actual product: ROCKWOOL FLEXI A-PLATE 37 (1RUeGKvWmN70gYB8x7V9, NEPD-3413-2026-EN, made in Trondheim, per m³, 16.1 kgCO₂e/m³, valid to 2027). Swapping would roughly HALVE this group — the Enova generic (35 kgCO₂e/m³) is conservative here, not optimistic — so we have LEFT THE GENERIC IN PLACE for now and the email asks Veidekke to pick. TWO SMALLER THINGS IN THE SAME GROUP, also in the email item: a few rows carry 'STÅLSTENDERPLATE' (the batt cut for steel-stud walls) and 'PLATE FLEXEKSTREM33' — different products with different lambda riding along on the same line; and several 'PLATE FLEXEKSTREM33' rows have quantity 0, which are now removed everywhere along with every other zero row.",a:""},
+    {lv:"note",st:"answered",t:"GLAVA LAFTESTRIMMEL — EXCLUDED 3.8.26 (Eduard). All 17 rows of 'GLAVA LAFTESTRIMMEL M/PL B=140', the sealing strip that was riding along inside the bindingsverk components. Added to the material/resource drop rules next to musebånd / RADONBRØNN / FUGEMASSE; its rename rule is removed since no row survives to be renamed. Separately, EVERY row whose quantity is 0 is now dropped in every file (105 rows overall) — that takes the 'PLATE FLEXEKSTREM33' zero lines with it. Both are listed in the build log and the email tells Veidekke they are gone.",a:"Eduard 3.8.26: 'ignore this on 232: GLAVA LAFTESTRIMMEL exclude that row' and 'if original quantity is equal to 0 just exclude the element.'"},
+    {lv:"question",st:"open",sent:false,t:"STEEL TYNNPLATEPROFILER — RESOLVED AND APPLIED 3.8.26, with one gap. Veidekke's kg/m table arrived (45 mm 0.62 · 75 mm 0.74 · 95 mm 0.84 · 120 mm 0.98 · 160 mm 1.09 · 200 mm 1.36 kg/m), which retires the developed-width estimate we had refused to guess with. Each row's profile size is read from its own Resource code (THR145 → 145, SKP70 → 70, UI150/40 → 150, THZ45 → 45) and matched to the nearest table entry; qty(m) × kg/m gives the mass, and the EPD is now applied: Enova 'Thin steel profile (I,U,H,L,T) – typical value' (cXU298TKhfQKCeNiz1q1). ⚠ THE 245 mm PROFILES fall off the top of the table — THR245/1,0 and THSP245/1,0, 4 rows, also the only 1,0 mm plate profiles in the file — so they are clamped to the 200 mm rate and are UNDERSTATED. Email asks for a kg/m for those. Bug caught on the way: 'STÅLPR THZ45 40X45X30 3000' was matching the TIMBER cross-section rule (45×30) and being converted to a volume of wood; the steel branch now runs first.",a:"Eduard 3.8.26 supplied the kg/m table."},
+    {lv:"question",st:"open",sent:false,t:"SOKKELBESLAG — yes, we need kg, and we can get there: the Resource says 'Beslag Stål- … (0,6mm lakkert stål, std farge)', so 0.0006 m × 7850 = 4.71 kg/m² and the whole group is ≈2.1 kg. The m²→kg conversion is APPLIED on that basis; the whole group is ≈2.1 kg. One row ('Sokkelbeslag 250mm') was booked in METRES, and for that one we took the sheet area (0.2625 m²) from its own resource line rather than guessing an unfolded width. EPD assigned: 'Profiled Thin Steel Sheets' (Alsvåg plater AS, NEPD-5609-4905-NO, 2.93 kgCO₂e/kg) — Norwegian, and its 'colour-coated wall panels' matches 'lakkert stål, std farge'. Email asks them to confirm the 0.6 mm and the Alsvåg EPD, or send their actual flashing supplier's.",a:""},
+    {lv:"question",st:"open",sent:false,t:"MUSEBÅND — EXCLUDED FROM THE MASTER 31.7 (Eduard), pending Veidekke's confirmation. A perforated mouse guard ('MUSEBÅND 1,25M ISOLA'), a trim accessory: 15 rows + the Sto Ventec '.042' accessory row in 231, a couple of metres of strip in total, no weight or material spec. Email now says 'we have excluded this — confirm, or send kg/m and the material to bring it back'. Supersedes the 29.7 svinn-strip opt-out (moot once the rows are gone).",a:""},
+    {lv:"question",st:"open",sent:false,t:"DUPLICATE PAIRS WITH A 0-QTY TWIN (Eduard's find 31.7): 31 duplicated element+material pairs across 231/232, 19 of them with a zero line — e.g. 'Isolering av vegg - 200 mm' as 0.2 m³ AND 0 m³ under the same element, 'Bindingsverk av tre - 200 mm' as 0.038 m³ and as 0 m³. HANDLED ON OUR SIDE 3.8.26 — every 0-quantity row is now dropped, in every file — but the ask stands: the zero lines read like leftovers or alternates in the export, and the email asks Veidekke to clean them up at source or to confirm we simply drop them. Two housekeeping notes ride along: unit 'lm' is now normalised to 'm' throughout the master (24 Gyproc steel-stud rows), and we ask them to check the bindingsverk (timber stud) m²→m³ conversions, which are read from the resource by the same method as the chapter-261 roof timber.",a:""},
+    {lv:"blocker",st:"open",sent:false,t:"THE BIGGEST OPEN QUESTION IN CH 23 — the cladding 'menu'. ~20 cladding and element lines are booked at exactly 1.00 m² (occasionally 2.00) per m² of wall with an EMPTY Resource: Steni, fibersementplate, aluminiumskompositt, lakkerte stålplater trapesprofil, Aluminium Bronze B50 2 mm, båndtekking, naturstein, Stofix, Kebony, Furu Royal, liggende trekledning, skjermtegl, sandwich fasadeelementer (skum 100/120/200 mm), sandwichelement steinull/glass, Veggelementer 198 mm, glassfasade U=0,8, Kantelement KE60, fasadeplate 12 mm for puss, Sikaproof A+. OUR READING: these are ALTERNATIVE cladding choices — a menu priced per m², not co-existing layers on one wall. They sit in different element groups (23.C/E/F/G/N) and several are mutually exclusive. If that is right, most should be EXCLUDED and only the ones actually chosen kept. We did not guess — nothing here has an EPD. Tell us which cladding types are real, and give a mass or thickness for those. 3.8.26: the email item now LISTS ALL 39 AFFECTED ROWS by Veidekke's own row number in their file, so they can go straight to them (it previously carried no row reference at all).",a:"Eduard 3.8.26: '232.1 and 232.2 provide what rows this is happening on.'"},
+    {lv:"blocker",st:"open",sent:false,t:"TEGLFORBLENDING — NOW A DOUBLE-COUNT QUESTION, not a 'what are these lines' question. Dansk / Tysk / Finsk / Langformat (62/56/45/37 bricks per m²), each format 3 rows in THREE units (m², m, kg) with an IDENTICAL material name. Reading the resource behind each row settles what they are: the m² row already contains the WHOLE assembly — 'TEGLST-Dansk format 62.stk/m2 (65.1 stk)', 'SKRUBINDER TRE/PLUGG 280MM (4.2 stk)', 'Betongbinder 310mm (1.05 stk)', 'Murarmeing 5mm kamstål (1.05 m)' AND 'WEBER MURMØRTEL M5 (78.75 kg)'. The m row is that same murarmering and the kg row is that same Weber M5 mortar. So the m and kg rows look like DUPLICATES of components the m² row already includes, which would double-count the mortar and the joint reinforcement — if the m² line is the complete brickwork, they should be removed. The four formats are also almost certainly alternatives rather than four claddings on one wall, and no brick EPD is assigned until we know which. The email lists all 13 affected rows by Veidekke's own row number.",a:"Eduard 3.8.26: '232.1 and 232.2 provide what rows this is happening on.'"},
+    {lv:"blocker",st:"open",sent:false,t:"GRUNNMURSPLATE EPS (t = 50/100/200 mm, incl. fiberduk, klasse 52; Resource 'EPS S 80'). We have XPS datasets but no EPS one, and EPS is a different material with a much lower density — we deliberately did NOT reuse the XPS ids. Sundolitt / Brødr. Sunde make EPS S80 and are already our XPS supplier. THE QUANTITY IS ALREADY CONVERTED TO m³, so the line is ready to use the moment an EPD arrives — this is a one-item unblock. The line also includes a fibre cloth we cannot separate out.",a:""},
+    {lv:"question",st:"open",sent:false,t:"PLATON XTRA / KNOTTEPLAST DELTA MS-SUNDOLITT are dimpled HDPE foundation membranes (m² and m). Resources are 'GRUNNMURPL XTRA 2,40X20M' and 'Knotteplast Delta MS-Sundolitt'. No HDPE dimple-sheet EPD in our set; the Enova dampsperre generic is a thin PE film and would understate a 0.6 mm dimpled sheet, so we did not reuse it. Email asks for a dimple-sheet EPD, or permission to use a generic HDPE sheet.",a:""},
+    {lv:"note",st:"answered",t:"MIS-BOOKING REPORTED AS FYI, no action needed from us — 'GLAVA LAFTESTRIMMEL M/PL B=140', a sealing strip, is booked under 'Bindingsverk av tre' AND 'Bindingsverk av stål' rather than under insulation, so the timber and steel stud lines each carry a strip. We renamed it in our grouping so it could not land on a timber EPD, and it is now excluded from the master entirely. The email tells Veidekke so they can correct it at source.",a:""},
+    {lv:"question",st:"open",sent:false,t:"VINDSPERRESJIKT is not a membrane here — the Resource is 'GIPSPL GU9 R 9,5X1200X3000 KLIMA GYPROC', a 9.5 mm gypsum sheathing board, so it sits on the plasterboard generic. GU9 is a purpose-made exterior sheathing board (impregnated, weather-resistant); if you want it distinguished from normal 12.5 mm interior board we need its own EPD. Candidates: 'Glasroc X Storm - vindsperreplate', 'webertherm 500 sheathing board'.",a:""},
+    {lv:"blocker",st:"open",sent:false,t:"THE BESLAG / BLIKK GROUP IS NOT MAPPABLE AS IT STANDS — ~35 rows where the SAME material appears in m, m² AND m³, and two rows have a BLANK unit. The resource is mostly 'Beslag Stål- Juster utbrettt .Pris .pr', which is a price placeholder and not a material. Ask: one consistent unit plus a steel thickness or kg/m. SECOND HALF: five rows here have a material name that is literally a number — '.030', '.042', '.043', '.044', '.068'. The name is missing entirely and only the resource says what they are (Utlekting for pussplate, Beslag ved sokkel, Musebånd, Fasadeplate 12mm for puss). All five sit under 'Værhud av pusssystem-Sto Ventec', so we read them as accessories of the Sto Ventec render system and renamed them from the resource on our side ('Sto Ventec pussystem: …'); the Musebånd one is excluded with the rest of the musebånd. Sto publish EPDs for the StoVentec systems, so naming the exact system would let us cost the whole thing per m² in one go — the email asks for real names at source AND the system name.",a:""},
+    {lv:"note",st:"answered",t:"Eduard reviewed the import sheet down to row 620 (through 'Teglforblending-Dansk Format') on 29.7.26 and raised 12 items, all now carried as UNSENT notes on the affected rows. Rows 620+ still to review.",a:""}]},
+
+ {f:"241-T_klartilgjennomgang.xlsx",ch:"241",b:"T",v:"P",r:"N",m:"N",scope:null,fmt:"Condensed 13-col",
+  comments:[{lv:"note",st:"open",t:"Condensed 13-column layout (chapter 241, 24.A01…), not the raw 40k dump — needs a dedicated small-format parser before it can be merged.",a:""}]},
+
+ {f:"242.xlsx",ch:"242",b:"?",v:"N",r:"N",m:"N",scope:null,fmt:"Condensed 9-col",
+  comments:[{lv:"note",st:"open",t:"Condensed 9-column layout (chapter 242, 24.C01…). Needs the small-format parser; also confirm owner (Tollef/Ingrid) & status.",a:""}]},
+
+ {f:"251-I_TestTilReduzer.xlsx",ch:"251",b:"I",v:"P",r:"D",m:"D",scope:107,fmt:"Shifted 33-col (custom map, 'Fjerne')",
+  groups:[["25.C01",20],["25.B10",13],["25.B11",13],["25.B01",12],["25.C03",12],["26.D02",3]],
+  epd:["Armering med kamstenger (incl. derived) → K1GLOoaSiXFa6AUukxY7 — 'Reinforcing steel - typical value' (Enova generic, NOT Celsa) ✎ re-evaluate","Plasstøpt betong / Massiv betongdekke → VbO0KK4RWrCnZozTTMAp (Low carbon 20 B35) ✎","Massivtre (CLT) → HfcN24gVKzao1VbfT9wD — Solid wood, typisk verdi (Enova)","Huldekker HD 265/320/400/500 → Veidekke Prefab 'Hollow core, Low Carbon Class Plus' per thickness","Huldekker HD 200 → 6R7GGCWbe0Sp32wV2gil — library entry is HD 210 ✎ check","Plattendekke slakarmert 50 mm → Ug2hKXrIdgAQP9iuiaCo · forspent 80 mm → 5f7Uw2oNHOskdjTPR4fZ (Buskerud Betongvarefabrikk)","Sponplater 22 mm → 5mFvTiU1XJBifMXJAauC (Chipboard, Enova)","Isolasjon i trebjelkelag → gtARrQEraEfBp2DXC00h (Mineralull) ✎ assumption","Trebjelkelag 48×198 → wmm9dv0GUECXP3y7HQnV (Planed lumber) — 7.128 kg/m²","Armering med spennkabler → BLOCKER (need kg/m² factor)","DT-elements → BLOCKER (no mass)","Støpt belegg → 48uiFyNr9Bgyk0KkrBJh (Enova 'Leveling compound - typical value', per kg) — assigned 31.7 ✎"],
+  comments:[
+    {lv:"note",st:"answered",t:"EPD MAP MARKED DONE 4.8.26. Every 251 product line that can be mapped from the file is mapped, and every quantity is converted into the unit its chosen EPD is declared in. The two lines still without an EPD — Armering med spennkabler and the DT-elements — are blocked on a number only Veidekke can give (kg/m² of cable, m³ of element per m²), not on further mapping work here. Veidekke's own status on this file is untouched.",a:"Eduard 4.8.26."},
+    {lv:"note",st:"answered",t:"MERGED (24 Jul): 103 visible rows → 99 kept (4 BubbleDeck 'bubble' lines erased) + 8 derived rebar lines = 107. Shifted layout, same custom map as 223 (qty col R, unit col X). Every converted qty is highlighted with a comment showing the arithmetic.",a:""},
+    {lv:"note",st:"answered",t:"EPD ROUND 27 Jul — 14 of 20 product lines now have an EPD. Unique Products for ch 25 is collapsed to EPD groups (all Massivtre → one line, all Massiv betongdekke → one, all Plasstøpt betong incl. B45M40 → one), each row tagged with its 2-digit code and colour-coded by it. Every id is now resolved against the Reduzer library, so the sheet also shows what the EPD is, its producer and its emission intensity.",a:""},
+    {lv:"note",st:"answered",t:"METHODOLOGY: we convert each source quantity into whatever unit the chosen EPD is declared in (checked in the library's ⓘ dialog). → m³: Massiv betongdekke, Massivtre, Sponplater (22 mm), Isolasjon (200 mm). → kept in m²: Plattendekke and the HD decks, whose EPDs are declared per m². → kg: Trebjelkelag, and (since 31.7) Støpt belegg — 30 mm × 1700 kg/m³ = 51 kg/m², because its EPD is declared per kg.",a:""},
+    {lv:"note",st:"answered",t:"Trebjelkelag 48×198 mm converted m²→kg: cross-section 0.048×0.198 m at c/c 600 mm = 0.01584 m³ per m², × 450 kg/m³ (density from the EPD) = 7.128 kg/m². Joist spacing 600 mm per Eduard 27.7. Ask reframed 31.7: we show the arithmetic, Veidekke checks the calculation — no separate spacing/section confirmation.",a:""},
+    {lv:"note",st:"answered",t:"Plattendekke UN-merged and un-converted (27 Jul): the two planks are separate lines again, each with its own thickness EPD, and both are kept in m² — those EPDs are declared per m² and already include the reinforcement (50 mm: 8 kg rebar + 1.66 lm lattice girders per m²; 80 mm: 8 tension cables + 3.15 kg). The earlier m²→m³ conversion would have double-counted.",a:""},
+    {lv:"note",st:"answered",t:"Derived rebar added at 80 kg/m³ (was 100 kg/m³ until 24 Jul; changed by Eduard 27 Jul) to the no-rebar concrete decks — Massiv betongdekke (25.D02/26.D02) and deck-over-column (25.B10-10, 25.B11-05). Chapter-25 rebar total 1394.5 → 1271.3 kg. Highlighted + noted as derived.",a:""},
+    {lv:"question",st:"open",sent:false,t:"Rebar EPD needs re-evaluating. The id we use everywhere (K1GLOoaSiXFa6AUukxY7) is Enova's generic 'Reinforcing steel - typical value' (0.98 kg CO₂e/kg), not a producer EPD — our notes wrongly called it 'Celsa'. Kept for now. If you buy from a known supplier, send that producer's rebar EPD and we swap it in across 213 / 216 / 223 / 251.",a:""},
+    {lv:"question",st:"open",sent:false,t:"Huldekker HD 200 mm — no EPD exists for 200 mm, so we deliberately use the nearest thickness: 'Hollow core, Low Carbon Class Plus HD 210' (Veidekke Prefab). Please confirm 210 mm is acceptable, or send an HD 200 EPD if you have one.",a:""},
+    {lv:"question",st:"open",sent:false,t:"Isolasjon i trebjelkelag 200 mm — the line doesn't say which insulation, so we ASSUME mineral wool ('Mineralull, innervegg', 25 kg/m³). Email asks [Confirm mineral wool] and, for the Trebjelkelag m²→kg conversion, [Check this calculation] with the arithmetic shown (48×198 @ c/c 600 → 7.128 kg/m²). Eduard 31.7: don't ask about the gross-area/0.92 joist factor and don't make them confirm the spacing — we show how we calculated, they check it.",a:""},
+    {lv:"question",st:"open",sent:false,t:"Chapter-25 concrete mapped to 'Low carbon 20 B35' as our default — email asks [Confirm B35]. Veidekke to verify against their own data which strength classes apply. The same email item also asks them to [Confirm the derived rebar at 80 kg/m³] added to the concrete decks that had no reinforcement line at all (Massiv betongdekke 25.D02 / 26.D02 and the deck-over-column 25.B10-10 / 25.B11-05) — their own 2.7.26 guidance, changed from 100 to 80 kg/m³ on 27.7. Those rows are highlighted and carry a comment saying the rebar is derived.",a:""},
+    {lv:"blocker",st:"open",sent:false,t:"Prestressed cables (Armering med spennkabler, 25.B10/25.B11) are still in m² — I don't have the kg/m² factor to convert them, so no EPD is applied yet. Meeting said 'convert to kg' but the factor isn't recorded — please provide it.",a:""},
+    {lv:"note",st:"answered",t:"Chapter-25 open items (below) resolved at the 2 Jul 2026 meeting; the decisions apply to 251 and 252.",a:""},
+    {lv:"question",st:"open",t:"DT-elements (25.D03), given in m² with Resource = 0 and no mass. Eduard 31.7: do NOT split into concrete + rebar — ask Veidekke for the m³ of element per m² (per thickness) and find one EPD that covers the whole element, concrete and rebar together. Email ask updated accordingly.",a:"Thought Reduzer had element emissions data. Waiting on Veidekke's m³-per-m² figures.",aw:true},
+    {lv:"question",st:"answered",t:"Støpt belegg (floor levelling, 25.D03) has no thickness → need mm to get m³.",a:"Use 30 mm."},
+    {lv:"note",st:"answered",t:"STØPT BELEGG EPD FOUND 31.7 — Enova 'Leveling compound - typical value' (48uiFyNr9Bgyk0KkrBJh, per kg, 0.47 kgCO₂e/kg A1-3, density 1700 kg/m³, valid to 2029). The 28.7 search failed because it used the English word 'screed'; searching the Norwegian term 'avretting' returns it directly (plus three Hey'di producer EPDs). Conversion changed m²→m³ to m²→kg (30 mm × 1700 = 51 kg/m²); email asks Veidekke to confirm the generic or send their product's EPD.",a:"Lesson: always search the Norwegian trade term before concluding the library lacks a product."},
+    {lv:"question",st:"answered",t:"Prestressed rebar (Armering med spennkabler) given in m² → need kg.",a:"As agreed in meeting 2.7.26."},
+    {lv:"question",st:"answered",t:"BubbleDeck (25.C03) — first of the lines was unclear.",a:"These are the bubbles; can be erased (low CO₂ contribution)."},
+    {lv:"confirm",st:"answered",t:"Default EPDs — rebar and concrete?",a:"Rebar: Celsa. Concrete: 'lavkarbon 20' (= old Lavkarbon A)."},
+    {lv:"question",st:"answered",t:"Plattendekke (Slakarmert / Forspent plattendekke, 25.C01) plank thickness assumption?",a:"70% 50 mm + 30% 80 mm. If a single thickness, use 60 mm. — Superseded 27.7: each plank now uses its own per-m² EPD (50 mm / 80 mm), so no thickness assumption is needed."},
+    {lv:"question",st:"answered",t:"Massiv betongdekke (25.D02, 200/220/260 mm) has no rebar — assume 80–100 kg/m³?",a:"As agreed in meeting 2.7.26."},
+    {lv:"question",st:"answered",t:"HD-elements (25.D01) — only the 265 mm has an EPD; the rest (320/400/500) do not.",a:"A kg/m² table is OK. — Resolved 27.7: Veidekke Prefab EPDs found for 265 / 320 / 400 / 500, all kept in m². Only HD 200 has no match (using HD 210)."},
+    {lv:"question",st:"answered",t:"Deck over column (25.B11) — concrete only, no rebar figure.",a:"No good numbers yet; use 100 kg/m³ until further advised. — Updated 27.7 to 80 kg/m³."},
+    {lv:"question",st:"answered",t:"Insulation grouped to m³ rather than per board-construction split — OK?",a:"OK."},
+    {lv:"question",st:"answered",t:"Concrete strength known but low-carbon class not stated for some rows.",a:"Use low carbon 20 and Celsa EPD. — Updated 27.7: ch 25 uses the Low carbon 20 B35 dataset; the 'Celsa' rebar is actually the Enova generic (see the re-evaluation item above)."},
+    {lv:"note",st:"open",t:"No 'Fjernes' column in this file (Ingrid's) — scope = all visible rows. Confirm nothing else should be excluded.",a:""},
+    {lv:"note",st:"answered",t:"DESCRIPTION RECOVERED 29.7.26 — another UNDERPOST-level file, so source col I was empty on all 107 rows. Now read off the child ressurs rows (text only, still out of scope): 99 of 99 source rows described; the 8 remaining blanks are the derived-rebar rows we generate ourselves, which have no source row by definition.",a:""}]},
+
+ {f:"252-I_klartilgjennomgang.xlsx",ch:"252",b:"I",v:"D",r:"D",m:"D",scope:87,fmt:"Standard aligned 32-col ('Fjerne')",
+  groups:[["25.A03",53],["25.A01",12],["25.A10",9],["25.A11",9],["25.A06",6]],
+  epd:["Collapsed to 9 EPD lines (same treatment as 251) — 6 of 9 now have an EPD.","Plasstøpt betong (inkl. B35M40 / B35M45 / B45M40) → VbO0KK4RWrCnZozTTMAp (Low carbon 20 B35) ✎","Magerbetong → 0egqpz4zK5AKAOTkX5d2 (Reduzer 'Cast-in-place concrete - Low carbon A B20', 160 kgCO₂e/m³, per m³) — replaces the B35 stand-in 3.8.26 ✎","Armering (kamstenger, nett K189/K257, tilleggsarmering) → K1GLOoaSiXFa6AUukxY7 ✎ re-evaluate","Markisolering XPS 300 SL (5 thicknesses merged) → frbmxcvvxYwz9LwYyN1h","Glidesjikt av plast → Rav7AiFN6R7yCDsL7pTk (Dampsperre - typisk verdi, Enova)","Radonsperre (membran) → TSRHVqEbxO24G6xGymK4 (Canes Radon Barrier 0.35 mm, CAnes AS), 1 m² per m² of bunnplate","RADONBRØNN A 200 ISOLA (2 rows booked under the Radonsperre name) → EXCLUDED 3.8.26","Armering med spennkabler → BLOCKER (need kg/m² factor)","Armering og uttrekk comax → BLOCKER: needs a Comax EPD, a kg description, or a ruling to exclude"],
+  comments:[
+    {lv:"note",st:"answered",t:"EPD MAP MARKED DONE 4.8.26. All 252 product lines are mapped and converted, including the two that were still stand-ins on 27.7 — Magerbetong now has a real lean-concrete EPD and the RADONBRØNN rows are resolved by exclusion. What remains open is the spennkabler factor and the Comax ruling, both of which are Veidekke's to answer. Veidekke's own status on this file is untouched.",a:"Eduard 4.8.26."},
+    {lv:"question",st:"open",sent:false,t:"MAGERBETONG NOW HAS A REAL LEAN-CONCRETE EPD (3.8.26) — 'Cast-in-place concrete - Low carbon A B20' (Reduzer, 0egqpz4zK5AKAOTkX5d2, 160 kgCO₂e/m³, declared per m³, 8 % cement, density 2400 kg/m³). It replaces the B35 structural dataset we had used as a stand-in, which overstated lean concrete by ≈19 % per kg (0.094 → 0.076). 3 lines, 0.45 m³ total (25.A10), already in m³ so nothing is converted. TWO THINGS TO CONFIRM: (1) the resource on all three rows reads 'BETONG B30 M60' — their file says B30 while this EPD is B20, and B20 is the usual class for blinding concrete but we will not quietly downgrade what they specified; (2) the rest of the job uses the 'Low carbon 20' naming while this dataset is named 'Low carbon A'. Search lesson recorded: the library DOES hold lean concrete, indexed by STRENGTH CLASS, not by the Norwegian trade name — the same class of mistake as 'screed' vs 'avretting'.",a:"Eduard 3.8.26 supplied the id and asked for the confirm."},
+    {lv:"note",st:"answered",t:"MERGED (27 Jul) into code 25 alongside 251 — Reduzer_import_25.xlsx is now 196 rows (107 from 251 + 89 from 252). Standard ALIGNED 32-col layout, so no custom column map was needed; 89 in-scope rows, matching the earlier scope count.",a:""},
+    {lv:"note",st:"answered",t:"CORRECTION to the earlier 'no Fjernes column' note: the file DOES have an exclude column, spelled 'Fjerne' without the s (same as 251). Our detector only matched 'Fjernes', so it would silently have skipped the filter — fixed to match 'fjern*'. Veidekke has filtered this file.",a:""},
+    {lv:"note",st:"answered",t:"Same collapsing logic as 251: 24 product/unit combinations → 10 EPD lines. All four concrete variants (plain, B35M40, B35M45, B45M40) merge onto one line; the whole rebar family (kamstenger, 'NB! KONFERER RIB', nett K189/K257, Svevespunt-nett, Tilleggsarmering 20 %) merges onto one; the five Markisolering thicknesses merge onto one.",a:""},
+    {lv:"note",st:"answered",t:"Conversions: Markisolering XPS m²→m³ by thickness (50/100/150/200/300 mm) — same rule and same Sundolitt EPD as chapter 21X, total 1.8375 m³. Glidesjikt av plast converted stk→m² at 111.11 m² per roll, which reproduces exactly the 1.2 m² per line (27.6 m² total) that Veidekke's own '252 Reduzer Revision 1' file shows for these rows.",a:""},
+    {lv:"note",st:"answered",t:"No derived rebar in 252 — unlike 251, every concrete element already carries its own reinforcement line, so the 80 kg/m³ rule does not fire here.",a:""},
+    {lv:"note",st:"answered",t:"EPDs assigned 27 Jul: Glidesjikt av plast → Rav7AiFN6R7yCDsL7pTk ('Dampsperre - typisk verdi', Enova, 0.43 kgCO₂e/m²); Radonsperre → TSRHVqEbxO24G6xGymK4 ('Canes Radon Barrier 0.35 mm', CAnes AS, real EPD, per m²); Magerbetong → the B35 dataset as an approved stand-in.",a:"Eduard 27.7: use these; lean concrete on B35."},
+    {lv:"question",st:"open",sent:false,t:"RADONSPERRE — the membrane sits on 'Canes Radon Barrier 0.35 mm' (per m²) at exactly 1 m² per 1 m² of bunnplate; the email asks them to say if that assumption is wrong. THE SECOND HALF IS NOW AN EXCLUSION, NOT A QUESTION (Eduard 3.8.26): the two stk lines booked under the same 'Radonsperre' material name have resource 'RADONBRØNN A 200 ISOLA Ø125X65' — a radon WELL, not a membrane — and are now dropped from the master (import rows 1213 / 1221, source 25966 / 26080, 25.A03-02 and 25.A03-11). The reason checks out arithmetically: 0.00909 pcs per m² is exactly 1/110, i.e. one well per 110 m² of slab, so the well is a single sump item spread over an area rather than a material quantity that scales with it — and 2.7.26 guidance already called RADONBRØNN droppable. Implemented as a resource/material match so a future file with the same resource is caught automatically. Email asks them to confirm the exclusion, and to send a straight COUNT of wells if they want them back in. Note the 31.7 correction still stands: an earlier note here claimed a 111.11 m²/roll conversion on these rows, which was wrong about our own arithmetic.",a:"Eduard 3.8.26: 'Exclude everything on 252 that is called RADONBRØNN on column resource… add a note that we excluded it and that they should confirm.'"},
+    {lv:"blocker",st:"open",sent:false,t:"'Armering og Uttrekk comax og bøying' (25.A11) cannot be mapped yet. It appears twice with different units (10 kg and 1 m) and has no EPD. We need EITHER a specific Comax EPD, OR a proper kg description (steel mass of the box + rebar) so it can go on the rebar EPD — the 'm' line cannot be priced against any kg/m³ EPD. We also need a ruling on WHICH ELEMENTS should be included and which should not: earlier guidance was that the Comax konsoll itself is droppable. Eduard 31.7: a third option — EXCLUDE the lines entirely (quantities are small) — is now proposed in the email alongside box/rebar/whole-line.",a:""},
+    {lv:"blocker",st:"open",sent:false,t:"Armering med spennkabler (25.A03, 4 lines, 5 m²) — same blocker as 251: booked in m², which no steel EPD can use. The 2.7.26 meeting agreed to convert to kg but the kg/m² factor was never recorded. We need the kg of prestressing steel per m² (or the cable mass directly in kg) for BOTH 251 (8 lines) and 252 (4 lines). Same shape of problem as the DT-elements: an area with no mass. ADDED 31.7 (Eduard's find): under 25.A03-14/-31 the group is TWO lines each — the cables AND 'UE - Spennarmering montering t=400' (an installation line, reading t=400 even under the t=300 element). Email now asks Veidekke which lines to take and how to convert what we keep — we do not guess.",a:""},
+    {lv:"note",st:"answered",t:"QUANTITIES ARE NOW NET OF WASTE (27 Jul, applies to every chapter). Rule: net = Mengde ÷ (1 + Svinn/100), per row. Reduzer applies its own Wastage per product, so Veidekke's svinn would be double-counted. Effect here: concrete 0.105 → 0.1 m³, Magerbetong 0.12 → 0.1, and the slip-layer foil lands on exactly 1 m² per line. Only the aligned files (21-T and 252) carried the uplift; the shifted files (213&216, 223, 251) already held clean geometry — verified row by row.",a:"Eduard 27.7: 100 mm thick → .1 m³, not .105."}]},
+
+ {f:"262-T_pågår.xlsx",ch:"262",b:"T",v:"P",r:"N",m:"N",scope:null,fmt:"No-Fjernes 31-col",
+  comments:[{lv:"blocker",st:"waiting",aw:true,t:"31-col export, no 'Fjernes' column → Veidekke has not filtered yet.",a:"Wait for a 'klar til gjennomgang' version."}]},
+
+ {f:"263.xlsx",ch:"263",b:"?",v:"N",r:"N",m:"N",scope:null,fmt:"No-Fjernes 31-col",
+  comments:[{lv:"blocker",st:"waiting",aw:true,t:"Not started by Veidekke; no 'Fjernes' column. No owner/status token in filename.",a:"Wait for review-ready version; confirm owner (Tollef/Ingrid)."}]},
+ {f:"265.xlsx",ch:"265",b:"?",v:"N",r:"N",m:"N",scope:null,fmt:"No-Fjernes 31-col",
+  comments:[{lv:"blocker",st:"waiting",aw:true,t:"Not started; no 'Fjernes'; no owner/status token in filename.",a:"Wait for review-ready version; confirm owner (Tollef/Ingrid)."}]},
+ {f:"266.xlsx",ch:"266",b:"?",v:"N",r:"N",m:"N",scope:null,fmt:"No-Fjernes 31-col",
+  comments:[{lv:"blocker",st:"waiting",aw:true,t:"Not started; no 'Fjernes'; no owner/status token in filename.",a:"Wait for review-ready version; confirm owner (Tollef/Ingrid)."}]},
+ {f:"281.xlsx",ch:"281",b:"?",v:"N",r:"N",m:"N",scope:null,fmt:"No-Fjernes 31-col",
+  comments:[{lv:"blocker",st:"waiting",aw:true,t:"Not started; no 'Fjernes'; no owner/status token in filename.",a:"Wait for review-ready version; confirm owner (Tollef/Ingrid)."}]},
+ {f:"284.xlsx",ch:"284",b:"?",v:"N",r:"N",m:"N",scope:null,fmt:"No-Fjernes 31-col",
+  comments:[{lv:"blocker",st:"waiting",aw:true,t:"Not started; no 'Fjernes'; no owner/status token in filename.",a:"Wait for review-ready version; confirm owner (Tollef/Ingrid)."}]},
+ {f:"287.xlsx",ch:"287",b:"?",v:"N",r:"N",m:"N",scope:null,fmt:"No-Fjernes 31-col",
+  comments:[{lv:"blocker",st:"waiting",aw:true,t:"Not started; no 'Fjernes'; no owner/status token in filename.",a:"Wait for review-ready version; confirm owner (Tollef/Ingrid)."}]},
+];
+
+const sum=(a)=>a.reduce((x,y)=>x+y,0);
+const allC=DATA.flatMap(d=>d.comments.map(c=>({...c,f:d.f})));
+const nOpen=allC.filter(c=>c.st==="open").length;
+const nWait=allC.filter(c=>c.st==="waiting").length;
+const nAns=allC.filter(c=>c.st==="answered").length;
+const rowsCounted=sum(DATA.map(d=>d.scope||0));
+const nDone=DATA.filter(d=>d.v==="D").length;
+
+document.getElementById("tiles").innerHTML=[
+ {n:DATA.length,l:"Source files",sub:"NS3451 chapters 21–28",c:""},
+ {n:DATA.filter(d=>d.scope!=null).length,l:"Parsed & counted",sub:rowsCounted.toLocaleString("en")+" in-scope rows",c:"hi"},
+ {n:nDone,l:"Veidekke: Done",sub:"rest in progress / not started",c:"good"},
+ {n:nOpen,l:"Open items",sub:"need a decision or action",c:"crit"},
+ {n:nWait,l:"Waiting",sub:"on Veidekke / Herman / data",c:"warn"},
+ {n:nAns,l:"Answered",sub:"answered by Tollef",c:"good"},
+].map(t=>`<div class="tile ${t.c}"><span class="bar"></span><div class="n">${t.n}</div><div class="l">${t.l}</div><div class="sub">${t.sub}</div></div>`).join("");
+
+let view="files", cfilter="all", code="", q="", sort={col:"chapter",dir:1};
+const ownerName=b=>({T:"Tollef",I:"Ingrid"}[b]||"—");
+const codeMatch=(d)=>!code||d.ch.split(/[&\s]+/).filter(Boolean).some(x=>x.startsWith(code));
+const rank={D:0,P:1,H:1,W:1,O:1,N:2};
+
+const CF={all:["All",""],open:["Open","var(--crit)"],waiting:["Waiting","var(--warn)"],answered:["Answered","var(--good)"]};
+const chips=document.getElementById("chips");
+function tallyCF(k){return k==="all"?allC.length:allC.filter(c=>c.st===k).length;}
+function drawChips(){
+  chips.innerHTML=Object.entries(CF).map(([k,[l,col]])=>
+    `<button class="chip" data-k="${k}" aria-pressed="${k===cfilter}">${col?`<span class="dot" style="background:${col}"></span>`:""}${l}<span class="k">${tallyCF(k)}</span></button>`).join("");
+}
+drawChips();
+
+const esc=s=>String(s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+const stPill=(x)=>`<span class="st ${SL[x][1]}"><span class="dot"></span>${SL[x][0]}</span>`;
+function cBadges(d){
+  const o=d.comments.filter(c=>c.st==="open").length,w=d.comments.filter(c=>c.st==="waiting").length,a=d.comments.filter(c=>c.st==="answered").length;
+  let out=[];
+  if(o)out.push(`<span class="b b-open">${o} open</span>`);
+  if(w)out.push(`<span class="b b-wait">${w} wait</span>`);
+  if(a)out.push(`<span class="b b-ans">${a} ✓</span>`);
+  return `<span class="cbadge">${out.join(" ")||'<span class="mut">—</span>'}</span>`;
+}
+const lvName={question:"Question",confirm:"Confirm",blocker:"Blocker",note:"Note"};
+const ssName={open:"OPEN",waiting:"WAITING",answered:"ANSWERED"};
+const ssCls={open:"ss-open",waiting:"ss-wait",answered:"ss-ans"};
+const stClsShort={open:"open",waiting:"wait",answered:"ans"};
+
+function cmtHTML(c){
+  const a=c.a?`<div class="a ${c.aw?'wait':''}">${esc(c.a)}</div>`:"";
+  return `<div class="cmt ${c.lv==='note'?'note':stClsShort[c.st]}">
+    <div class="cmt-head"><span class="lv lv-${c.lv}">${lvName[c.lv]}</span>
+      <span class="sstate ${ssCls[c.st]}">${ssName[c.st]}</span>${c.sent===false?'<span class="unsent">✎ UNSENT</span>':''}</div>
+    <div class="q">${esc(c.t)}</div>${a}</div>`;
+}
+function matchC(c){return cfilter==="all"||c.st===cfilter;}
+function matchFile(d){
+  if(!codeMatch(d)) return false;
+  if(cfilter!=="all" && !d.comments.some(c=>c.st===cfilter)) return false;
+  if(q){const h=(d.f+" "+d.ch+" "+d.fmt+" "+(d.groups||[]).map(g=>g[0]).join(" ")+" "+d.comments.map(c=>c.t+" "+(c.a||"")).join(" ")).toLowerCase();
+    if(!h.includes(q))return false;}
+  return true;
+}
+function keyval(d,col){
+  switch(col){
+    case "file": return d.f.toLowerCase();
+    case "owner": return ownerName(d.b);
+    case "veidekke": return rank[d.v];
+    case "review": return rank[d.r];
+    case "epd": return rank[d.m];
+    case "scope": return d.scope==null?-1:d.scope;
+    case "open": return d.comments.filter(c=>c.st==="open"||c.st==="waiting").length;
+    default: return d.ch;
+  }
+}
+function cmp(a,b){
+  let x=keyval(a,sort.col),y=keyval(b,sort.col),r=0;
+  if(x<y)r=-1;else if(x>y)r=1;
+  if(r===0) r = a.ch<b.ch?-1:a.ch>b.ch?1:0;   // stable tiebreak on chapter
+  return sort.dir*r;
+}
+const openRows=new Set();
+function panel(d){
+  const groups=d.groups?`<div style="margin-bottom:14px"><h4>Element groups (top, in scope)</h4><div class="groups">${d.groups.map(([g,c])=>`<span class="gchip">${g}·<b>${c}</b></span>`).join("")}</div></div>`:"";
+  const epd=d.epd?`<div style="margin-bottom:6px"><h4>EPD mapping found</h4>${d.epd.map(e=>`<div class="epd">${esc(e)}</div>`).join("")}</div>`:"";
+  const cs=cfilter==="all"?d.comments:d.comments.filter(c=>c.st===cfilter);
+  return `<div class="panel"><div>
+      <div class="statline"><span class="lab">Veidekke</span>${stPill(d.v)}</div>
+      <div class="statline"><span class="lab">Review</span>${stPill(d.r)}</div>
+      <div class="statline"><span class="lab">EPD map</span>${stPill(d.m)}</div>
+      <dl class="kv">
+        <dt>Chapter (NS3451)</dt><dd class="mono">${d.ch}</dd>
+        <dt>Owner</dt><dd>${ownerName(d.b)==="—"?"unassigned":ownerName(d.b)}</dd>
+        <dt>Layout</dt><dd>${d.fmt}</dd>
+        <dt>In scope</dt><dd class="mono">${d.scope==null?"pending":d.scope}</dd>
+      </dl>${groups}${epd}
+    </div>
+    <div><h4>Comments &amp; open items (${cs.length})</h4><div class="thread">${cs.map(cmtHTML).join("")||'<div style="color:var(--faint);font-size:13px">No comments in this filter.</div>'}</div></div>
+  </div>`;
+}
+function updateArrows(){
+  document.querySelectorAll("thead th[data-k]").forEach(th=>{
+    const a=th.querySelector(".ar");
+    a.textContent = th.dataset.k===sort.col ? (sort.dir===1?"▼":"▲") : "";
+    th.setAttribute("aria-sort", th.dataset.k===sort.col ? (sort.dir===1?"ascending":"descending") : "none");
+  });
+}
+function renderFiles(){
+  const rows=DATA.filter(matchFile).sort(cmp);
+  document.getElementById("emptyF").hidden=rows.length>0;
+  document.getElementById("body").innerHTML=rows.map(d=>{
+    const open=openRows.has(d.f);
+    return `<tr class="row ${open?'open':''}" data-f="${d.f}">
+      <td><div class="fname"><span class="caret">▶</span>${esc(d.f)}</div></td>
+      <td class="chcell">${d.ch}</td>
+      <td class="ctr"><span class="bpill">${ownerName(d.b)}</span></td>
+      <td class="ctr">${stPill(d.v)}</td><td class="ctr">${stPill(d.r)}</td><td class="ctr">${stPill(d.m)}</td>
+      <td class="num"><span class="scope ${d.scope==null?'pend':''}">${d.scope==null?"—":d.scope}</span></td>
+      <td>${cBadges(d)}</td></tr>
+      <tr class="detail" ${open?"":"hidden"}><td colspan="8">${panel(d)}</td></tr>`;
+  }).join("");
+  updateArrows();
+}
+function renderComments(){
+  let items=allC.filter(matchC);
+  if(code)items=items.filter(c=>codeMatch(DATA.find(x=>x.f===c.f)));
+  if(q)items=items.filter(c=>(c.f+" "+c.t+" "+(c.a||"")).toLowerCase().includes(q));
+  const order={open:0,waiting:1,answered:2};
+  items.sort((a,b)=>(order[a.st]??3)-(order[b.st]??3));
+  document.getElementById("emptyC").hidden=items.length>0;
+  document.getElementById("cbody").innerHTML=items.map(c=>`
+    <div class="crow ${c.lv==='note'?'note':stClsShort[c.st]}">
+      <div class="crow-head"><span class="filetag" data-goto="${c.f}">${esc(c.f)}</span>
+        <span class="lv lv-${c.lv}">${lvName[c.lv]}</span>
+        <span class="sstate ${ssCls[c.st]}">${ssName[c.st]}</span>${c.sent===false?'<span class="unsent">✎ UNSENT</span>':''}</div>
+      <div class="q">${esc(c.t)}</div>${c.a?`<div class="a ${c.aw?'wait':''}">${esc(c.a)}</div>`:""}
+    </div>`).join("");
+}
+function render(){
+  document.getElementById("filesView").hidden=view!=="files";
+  document.getElementById("commentsView").hidden=view!=="comments";
+  if(view==="files")renderFiles(); else renderComments();
+}
+document.querySelector(".tabs").addEventListener("click",e=>{const b=e.target.closest(".tab");if(!b)return;
+  view=b.dataset.view;document.querySelectorAll(".tab").forEach(t=>t.setAttribute("aria-selected",t.dataset.view===view));render();});
+chips.addEventListener("click",e=>{const b=e.target.closest(".chip");if(!b)return;cfilter=b.dataset.k;
+  chips.querySelectorAll(".chip").forEach(x=>x.setAttribute("aria-pressed",x.dataset.k===cfilter));render();});
+document.querySelector("thead").addEventListener("click",e=>{const th=e.target.closest("th[data-k]");if(!th)return;
+  const k=th.dataset.k;
+  if(sort.col===k){sort.dir*=-1;}else{sort.col=k;sort.dir=(k==="scope"||k==="open")?-1:1;}
+  renderFiles();});
+document.getElementById("body").addEventListener("click",e=>{const r=e.target.closest("tr.row");if(!r)return;
+  const f=r.dataset.f;openRows.has(f)?openRows.delete(f):openRows.add(f);renderFiles();});
+document.getElementById("cbody").addEventListener("click",e=>{const t=e.target.closest(".filetag");if(!t)return;
+  view="files";document.querySelectorAll(".tab").forEach(x=>x.setAttribute("aria-selected",x.dataset.view==="files"));
+  openRows.add(t.dataset.goto);render();
+  const row=document.querySelector(`tr.row[data-f="${CSS.escape(t.dataset.goto)}"]`);if(row)row.scrollIntoView({block:"center"});});
+document.getElementById("code").addEventListener("input",e=>{code=e.target.value.replace(/[^0-9]/g,"");render();});
+document.getElementById("q").addEventListener("input",e=>{q=e.target.value.trim().toLowerCase();render();});
+render();
+</script>
+
+</body>
+</html>

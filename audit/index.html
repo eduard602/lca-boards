@@ -1,0 +1,825 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="icon" type="image/png" href="../v.png">
+</head>
+<body>
+<title>Element code audit — Mule / Krister</title>
+<style>
+:root{
+  --paper:#E8ECEA; --surface:#FFFFFF; --surface-2:#F1F4F2; --surface-3:#E2E7E4;
+  --ink:#111917; --ink-2:#4B5855; --ink-3:#6F7C79;
+  --line:#CCD4D1; --line-2:#DDE3E0;
+  --accent:#0E6B57;
+  --b-A:#17755C; --b-B1:#28679F; --b-B2:#9E6C10; --b-B3:#7E6320; --b-C:#654AA0; --b-CD:#8A3F63; --b-D:#AB3A2A;
+  --good:#17755C;
+  --shadow:0 1px 2px rgba(17,25,23,.06), 0 8px 24px -16px rgba(17,25,23,.22);
+  --vblue:#003DA5;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0D1110; --surface:#151B19; --surface-2:#1C2321; --surface-3:#232C29;
+    --ink:#E1E7E4; --ink-2:#94A39E; --ink-3:#74827E;
+    --line:#2B3532; --line-2:#222B29;
+    --accent:#48BFA2;
+    --b-A:#41BB96; --b-B1:#69A9E0; --b-B2:#DBA441; --b-B3:#C3943D; --b-C:#A98CE2; --b-CD:#D77AA6; --b-D:#E47565;
+    --good:#41BB96;
+    --shadow:0 1px 2px rgba(0,0,0,.5), 0 8px 24px -16px rgba(0,0,0,.8);
+    --vblue:#6D9EE8;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0D1110; --surface:#151B19; --surface-2:#1C2321; --surface-3:#232C29;
+  --ink:#E1E7E4; --ink-2:#94A39E; --ink-3:#74827E;
+  --line:#2B3532; --line-2:#222B29;
+  --accent:#48BFA2;
+  --b-A:#41BB96; --b-B1:#69A9E0; --b-B2:#DBA441; --b-B3:#C3943D; --b-C:#A98CE2; --b-CD:#D77AA6; --b-D:#E47565;
+  --good:#41BB96;
+  --shadow:0 1px 2px rgba(0,0,0,.5), 0 8px 24px -16px rgba(0,0,0,.8);
+    --vblue:#6D9EE8;
+}
+
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  font-size:15px; line-height:1.6;
+}
+.mono,code,.code{font-family:ui-monospace,SFMono-Regular,"SF Mono","Cascadia Mono",Menlo,Consolas,"Liberation Mono",monospace}
+.wrap{max-width:1120px; margin:0 auto; padding:0 24px 96px}
+
+/* ---------- version switch ---------- */
+.switchbar{
+  position:sticky; top:0; z-index:20; margin:0 -24px 0; padding:14px 24px;
+  background:color-mix(in srgb, var(--paper) 86%, transparent);
+  backdrop-filter:blur(9px); -webkit-backdrop-filter:blur(9px);
+  border-bottom:1px solid var(--line); display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+}
+.switch{display:inline-flex; background:var(--surface-3); border:1px solid var(--line);
+  border-radius:8px; padding:3px; gap:2px}
+.switch button{
+  font-family:ui-monospace,Menlo,Consolas,monospace; font-size:13px; font-weight:600;
+  border:0; background:transparent; color:var(--ink-2); cursor:pointer;
+  padding:8px 16px; border-radius:6px; display:flex; flex-direction:column; align-items:flex-start; gap:1px;
+  transition:background .16s,color .16s;
+}
+.switch button small{font-weight:400; font-size:10px; letter-spacing:.03em; color:var(--ink-3)}
+.switch button[aria-pressed="true"]{background:var(--ink); color:var(--paper)}
+.switch button[aria-pressed="true"] small{color:color-mix(in srgb,var(--paper) 72%,transparent)}
+.switch button:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.switch-note{font-family:ui-monospace,Menlo,Consolas,monospace; font-size:11.5px; color:var(--ink-3)}
+.switch-note b{color:var(--accent)}
+
+/* ---------- header ---------- */
+.brandbar{display:flex;align-items:center;gap:12px;margin:34px 0 -14px}
+.brandbar .wm-logo{height:28px;width:auto;display:block}
+.brandbar .wm-v{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;font-weight:800;font-size:18px;letter-spacing:.02em;color:var(--ink)}
+.brandbar .wm-r{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;font-weight:750;font-size:18px;color:var(--accent);text-transform:lowercase}
+.brandbar .wm-x{color:var(--ink-3);font-size:13px}
+.masthead{padding:40px 0 36px; border-bottom:1px solid var(--line)}
+.eyebrow{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  font-size:11px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--ink-3); display:flex; flex-wrap:wrap; gap:8px 18px; margin-bottom:20px;
+}
+.eyebrow b{color:var(--accent); font-weight:600}
+h1{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  font-size:clamp(26px,4.4vw,40px); line-height:1.12; letter-spacing:-.02em;
+  font-weight:600; margin:0 0 14px; text-wrap:balance; max-width:22ch;
+}
+h1 em{font-style:normal; color:var(--accent)}
+.standfirst{margin:0; max-width:66ch; color:var(--ink-2); font-size:16.5px}
+
+/* ---------- distribution bar ---------- */
+.dist{margin:34px 0 0}
+.dist-flags{display:flex; gap:2px; margin-bottom:6px; align-items:flex-end}
+.dist-flag{display:flex; flex-direction:column; align-items:center; justify-content:flex-end; min-width:14px; overflow:visible}
+.dist-flag .pct{font-family:ui-monospace,Menlo,Consolas,monospace; font-size:13px; font-weight:700;
+  letter-spacing:-.02em; line-height:1; white-space:nowrap; font-variant-numeric:tabular-nums}
+.dist-flag .tick{display:block; width:1px; height:7px; margin-top:3px; opacity:.55}
+.dist-flag.blank{visibility:hidden}
+.dist-bar{display:flex; height:44px; border-radius:3px; overflow:hidden; gap:2px; background:var(--line-2)}
+.dist-seg{position:relative; display:flex; align-items:center; justify-content:center; min-width:14px;
+  font-family:ui-monospace,Menlo,Consolas,monospace; font-size:12px; font-weight:600; color:#fff;
+  transition:flex .4s cubic-bezier(.4,0,.2,1), filter .15s}
+.dist-seg:hover{filter:brightness(1.12)}
+.dist-key{display:flex; flex-wrap:wrap; gap:6px 20px; margin-top:14px;
+  font-family:ui-monospace,Menlo,Consolas,monospace; font-size:11.5px; color:var(--ink-2)}
+.dist-key span{display:inline-flex; align-items:center; gap:7px}
+.dot{width:9px; height:9px; border-radius:2px; flex:none}
+
+/* ---------- fulfillment ---------- */
+.fulfill{display:grid; gap:26px; margin-top:24px}
+.fgroup{display:grid; gap:10px; transition:opacity .3s}
+.fgroup.dim{opacity:.4}
+.frow.dim{opacity:.5; transition:opacity .3s}
+.frow.on .fver{color:var(--accent)}
+.frow.on .ftrack{box-shadow:0 0 0 1px var(--accent) inset, var(--shadow)}
+.fgroup h3 .cur{color:var(--accent); font-weight:600; letter-spacing:.04em; text-transform:none}
+.fgroup h3{margin:0 0 2px; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:12px;
+  letter-spacing:.08em; text-transform:uppercase; color:var(--ink-2); font-weight:600;
+  display:flex; justify-content:space-between; align-items:baseline}
+.fgroup h3 small{color:var(--ink-3); font-weight:400; letter-spacing:0; text-transform:none}
+.frow{display:grid; grid-template-columns:34px 1fr 76px; align-items:center; gap:12px}
+.frow .fver{font-family:ui-monospace,Menlo,Consolas,monospace; font-size:12px; font-weight:700; color:var(--ink-2)}
+.ftrack{position:relative; height:26px; background:var(--surface-3); border:1px solid var(--line);
+  border-radius:4px; overflow:hidden; display:flex}
+.ftrack i{display:block; height:100%; transition:width .5s cubic-bezier(.4,0,.2,1)}
+.frow .fpct{font-family:ui-monospace,Menlo,Consolas,monospace; font-size:19px; font-weight:700;
+  letter-spacing:-.03em; text-align:right; font-variant-numeric:tabular-nums; color:var(--ink)}
+.frow .fpct small{display:block; font-size:10px; font-weight:400; color:var(--ink-3); letter-spacing:0}
+.flegend{display:flex; flex-wrap:wrap; gap:6px 18px; margin-top:4px;
+  font-family:ui-monospace,Menlo,Consolas,monospace; font-size:11px; color:var(--ink-2)}
+.flegend span{display:inline-flex; align-items:center; gap:6px}
+
+/* ---------- stats ---------- */
+.stats{display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:1px;
+  background:var(--line); border:1px solid var(--line); margin:40px 0 0; border-radius:4px; overflow:hidden}
+.stat{background:var(--surface); padding:20px 22px}
+.stat .n{font-family:ui-monospace,Menlo,Consolas,monospace; font-size:34px; font-weight:600;
+  letter-spacing:-.03em; line-height:1; font-variant-numeric:tabular-nums; display:flex; align-items:baseline; gap:8px}
+.stat .n small{font-size:16px; color:var(--ink-3); font-weight:400; letter-spacing:0}
+.stat .n .up{font-size:12px; color:var(--good); font-weight:600; letter-spacing:.02em}
+.stat .l{display:block; margin-top:9px; font-size:12px; letter-spacing:.07em; text-transform:uppercase;
+  color:var(--ink-3); font-family:ui-monospace,Menlo,Consolas,monospace}
+.stat .d{display:block; margin-top:7px; font-size:13px; color:var(--ink-2); line-height:1.45}
+
+/* ---------- sections ---------- */
+section{margin-top:60px}
+h2{
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:12px; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-3);
+  font-weight:600; margin:0 0 6px; padding-bottom:12px; border-bottom:1px solid var(--line);
+  display:flex; justify-content:space-between; align-items:baseline; gap:16px;
+}
+h2 span{color:var(--ink-3); letter-spacing:.06em; font-weight:400; text-transform:none}
+.lede{margin:18px 0 22px; max-width:74ch; color:var(--ink-2)}
+
+/* ---------- filter + chips ---------- */
+.filters{display:flex; flex-wrap:wrap; gap:8px; margin:22px 0 22px}
+.filt{
+  font-family:ui-monospace,Menlo,Consolas,monospace; font-size:12px;
+  background:var(--surface); color:var(--ink-2); border:1px solid var(--line);
+  padding:7px 13px; border-radius:3px; cursor:pointer; display:inline-flex; align-items:center; gap:8px;
+  transition:background .13s,color .13s,border-color .13s;
+}
+.filt:hover{background:var(--surface-2); color:var(--ink)}
+.filt[aria-pressed="true"]{background:var(--ink); color:var(--paper); border-color:var(--ink)}
+.filt[aria-pressed="true"] .dot{outline:1px solid var(--paper)}
+.filt b{font-variant-numeric:tabular-nums; font-weight:600}
+.filt:focus-visible,.chip:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+
+.grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(132px,1fr)); gap:7px}
+.chip{
+  font-family:ui-monospace,Menlo,Consolas,monospace; font-size:13px; text-align:left;
+  background:var(--surface); border:1px solid var(--line); border-left:3px solid var(--bc);
+  color:var(--ink); padding:9px 11px; border-radius:3px; cursor:pointer; width:100%;
+  transition:background .13s, transform .13s, border-color .3s;
+}
+.chip:hover{background:var(--surface-2); transform:translateY(-1px)}
+.chip[aria-pressed="true"]{background:var(--surface-3); border-color:var(--bc)}
+.chip .cb{display:block; font-size:10px; letter-spacing:.08em; color:var(--ink-3); margin-top:3px}
+.chip.hidden{display:none}
+
+/* ---------- detail ---------- */
+.detail{
+  margin-top:20px; background:var(--surface); border:1px solid var(--line);
+  border-radius:4px; padding:22px 24px; box-shadow:var(--shadow); min-height:120px;
+}
+.detail .dh{display:flex; flex-wrap:wrap; align-items:baseline; gap:12px; margin-bottom:4px}
+.detail .dc{font-family:ui-monospace,Menlo,Consolas,monospace; font-size:22px; font-weight:600; letter-spacing:-.01em}
+.detail .db{font-family:ui-monospace,Menlo,Consolas,monospace; font-size:11px; letter-spacing:.08em;
+  text-transform:uppercase; padding:3px 9px; border-radius:2px; color:#fff}
+.detail dl{display:grid; grid-template-columns:auto 1fr; gap:8px 20px; margin:18px 0 0; font-size:14px}
+.detail dt{font-family:ui-monospace,Menlo,Consolas,monospace; font-size:11px; letter-spacing:.08em;
+  text-transform:uppercase; color:var(--ink-3); padding-top:3px}
+.detail dd{margin:0; color:var(--ink-2)}
+.detail dd .line{display:block}
+.detail dd .kr{color:var(--b-B2); font-weight:600}
+.detail dd .warn{color:var(--b-D); font-weight:600}
+.empty{color:var(--ink-3); font-style:italic}
+
+/* ---------- tables ---------- */
+.tw{overflow-x:auto; border:1px solid var(--line); border-radius:4px; background:var(--surface)}
+table{border-collapse:collapse; width:100%; font-size:14px; min-width:660px}
+th,td{text-align:left; padding:11px 16px; border-bottom:1px solid var(--line-2); vertical-align:top}
+thead th{
+  font-family:ui-monospace,Menlo,Consolas,monospace; font-size:10.5px; letter-spacing:.1em;
+  text-transform:uppercase; color:var(--ink-3); font-weight:600;
+  background:var(--surface-2); border-bottom:1px solid var(--line); position:sticky; top:0;
+}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover{background:var(--surface-2)}
+td.num,th.num{text-align:right; font-variant-numeric:tabular-nums;
+  font-family:ui-monospace,Menlo,Consolas,monospace}
+td.c{font-family:ui-monospace,Menlo,Consolas,monospace; white-space:nowrap; font-weight:600}
+.kr-fig{font-family:ui-monospace,Menlo,Consolas,monospace; color:var(--b-B2); font-weight:600; white-space:nowrap}
+.mut{color:var(--ink-3)}
+.badge{font-family:ui-monospace,Menlo,Consolas,monospace; font-size:11px; padding:2px 8px; border-radius:2px;
+  white-space:nowrap; font-weight:600}
+.badge.built{background:color-mix(in srgb,var(--b-A) 16%,transparent); color:var(--b-A)}
+.badge.excl{background:color-mix(in srgb,var(--b-D) 16%,transparent); color:var(--b-D)}
+.bar-cell{min-width:150px}
+.mini{display:flex; height:8px; border-radius:2px; overflow:hidden; gap:1px; background:var(--line-2)}
+.mini i{display:block; transition:flex .4s cubic-bezier(.4,0,.2,1)}
+
+/* ---------- callout ---------- */
+.note{
+  border-left:3px solid var(--accent); background:var(--surface); padding:6px 22px;
+  border-radius:0 4px 4px 0; margin:26px 0 0; border-top:1px solid var(--line);
+  border-right:1px solid var(--line); border-bottom:1px solid var(--line);
+}
+.note p{margin:14px 0}
+.note strong{color:var(--ink)}
+
+.foot{margin-top:72px; padding-top:22px; border-top:1px solid var(--line);
+  font-family:ui-monospace,Menlo,Consolas,monospace; font-size:11.5px; color:var(--ink-3);
+  display:flex; flex-wrap:wrap; gap:8px 26px}
+
+@media (prefers-reduced-motion:reduce){*{transition:none !important}}
+@media (max-width:600px){
+  .masthead{padding:28px 0 24px}
+  .detail dl{grid-template-columns:1fr; gap:3px 0}
+  .detail dt{padding-top:12px}
+}
+</style>
+
+<div class="wrap">
+
+  <div class="switchbar">
+    <div class="switch" id="switch" role="tablist" aria-label="Test version">
+      <button type="button" data-v="v1" role="tab" aria-pressed="true">Test&nbsp;v1<small>06_Test</small></button>
+      <button type="button" data-v="v2" role="tab" aria-pressed="false">Test&nbsp;v2<small>07_Test_v.2 · both files</small></button>
+    </div>
+    <div class="switch" id="metricSwitch" role="tablist" aria-label="Count by">
+      <button type="button" data-m="code" role="tab" aria-pressed="true">By&nbsp;code<small>unique IDs</small></button>
+      <button type="button" data-m="pieces" role="tab" aria-pressed="false">By&nbsp;pieces<small>model instances</small></button>
+    </div>
+    <span class="switch-note" id="switchNote"></span>
+  </div>
+
+  <div class="brandbar"><img class="wm-logo" src="data:image/png;base64,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" alt="Veidekke"><span class="wm-v">Veidekke</span><span class="wm-x">&#215;</span><span class="wm-r">reduzer</span></div>
+
+  <header class="masthead">
+    <div class="eyebrow">
+      <span>component_mapping (Mule&nbsp;—&nbsp;Krister).xlsx</span>
+      <span>91 element codes</span>
+      <span id="ebCompare"></span>
+    </div>
+    <h1 id="h1"></h1>
+    <p class="standfirst" id="standfirst"></p>
+
+    <div class="dist">
+      <div class="dist-flags" id="distFlags" aria-hidden="true"></div>
+      <div class="dist-bar" id="distBar" role="img" aria-label="Distribution of 91 codes by outcome"></div>
+      <div class="dist-key" id="distKey"></div>
+    </div>
+  </header>
+
+  <div class="stats" id="stats"></div>
+
+  <section>
+    <h2>Fulfillment — by code vs by model pieces <span>both versions, on the IFC model</span></h2>
+    <p class="lede">
+      Comparing by <strong>unique code</strong> treats a code used once and a code used 1&nbsp;645
+      times as equal. Weighting by <strong>model pieces</strong> — the actual element instances in
+      <code>250916_Mule-EBK.ifc</code> (6&nbsp;143 physical elements, openings excluded) — shows how much
+      of the building each version really covers. Bars fill by the milestone set: v1 = built (A),
+      v2 = built + mirrored (A&nbsp;+&nbsp;B1&nbsp;+&nbsp;C). The toggles above highlight the active
+      metric and version; both stay side by side so the comparison never disappears.
+    </p>
+    <div class="fulfill" id="fulfill"></div>
+  </section>
+
+  <section>
+    <h2>Code index <span>click any code for detail</span></h2>
+    <p class="lede" id="indexLede"></p>
+    <div class="filters" id="filters"></div>
+    <div class="grid" id="grid"></div>
+    <div class="detail" id="detail"></div>
+  </section>
+
+  <section>
+    <h2 id="priceH2"></h2>
+    <p class="lede" id="priceLede"></p>
+    <div class="tw">
+      <table>
+        <thead><tr id="priceHead"></tr></thead>
+        <tbody id="priceBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>By chapter <span id="chSub"></span></h2>
+    <p class="lede" id="chLede"></p>
+    <div class="tw">
+      <table>
+        <thead><tr id="chHead"></tr></thead>
+        <tbody id="chapterBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>What each bucket means <span id="noteSub"></span></h2>
+    <div class="note" id="note"></div>
+  </section>
+
+  <div class="foot" id="foot"></div>
+</div>
+
+<script id="payload" type="application/json">[{"code":"21.I02-01","bucket":"A","ch":"21","catRows":76,"testRows":6,"views":["21-T"],"mat":["Isolering med XPS 250 SL. 100mm. — 6.6 m2","Kantsteng på bunnplate, høyde 30cm — 3.2 m2"],"kr":["Timelønn Betongarbeider — 2 timer","Spiker-skudd-støpelister-Exp.bolter — 64 kr","Timelønn Betongarbeider — 5 timer"],"res":["XPS 250 SL 100x585x2385 — 6.93 m2","KRYSSF OLJET GRAN 15MM. 1500x750 Ombruk 2-5 Peri -31.10.23 — 3.52 m2"],"siblings":4,"sibEx":["21.I02-01","21.I02-02","21.I02-03","21.I02-04"],"sibViews":["21-T"],"v2bucket":"A","v2where":"main","v2emoji":"✅","v2rows":14,"v2mapped":10,"v2ex":["Isolering med XPS 250 SL. 100mm. — 0.66 m3","Armering med kamstenger — 280 kg","Armering med kamstenger — 280 kg","Plasstøpt betong vanntett gulv — 2 m3"],"v2cdesc":"Heisgrube Næring (30 x 22 M. Dybde 1,6m) Bunn 300mm/Vegg300mm.","v2disp":"A","pieces":1,"piecesAll":1},{"code":"22.C02-91","bucket":"C","ch":"22","catRows":0,"testRows":0,"views":[],"mat":[],"kr":[],"res":[],"siblings":5,"sibEx":["22.C02-01","22.C02-02","22.C02-03","22.C02-04","22.C02-05"],"sibViews":["223-T"],"v2bucket":"C","v2where":"9x","v2emoji":"⚠️","v2rows":3,"v2mapped":2,"v2ex":["Bjelker av valseprofiler — 24.7 kg","Supplerende komponenter — 1 kg","Brannisolering 3.sider.R60 — 0.45 m2  ⚠needs EPD"],"v2cdesc":"Stålbjelker, HEA 140.Kvl. S355.(24,7kg/m) (0,794m2/m)","v2disp":"C","pieces":9,"piecesAll":9},{"code":"22.C03-01","bucket":"A","ch":"22","catRows":15,"testRows":1,"views":["223-T"],"mat":["Bjelker oppsveist av profiler/plater. — 63.84 kg","Supplerende komponenter — 1 kg"],"kr":[],"res":["STÅLKONSTRUKSJONER HSQ Bjelker levert og montert. — 63.84 kg","STÅLKONSTRUKSJONER HSQ Bjelker levert og montert. — 1 kg"],"siblings":3,"sibEx":["22.C03-01","22.C03-02","22.C03-03"],"sibViews":["223-T"],"v2bucket":"A","v2where":"main","v2emoji":"✅","v2rows":3,"v2mapped":2,"v2ex":["Bjelker oppsveist av profiler/plater. — 63.84 kg","Supplerende komponenter — 1 kg","Brannisolering 3.sider.R60 — 0.5 m2  ⚠needs EPD"],"v2cdesc":"Stålbjelker, Hatteprofil m/feste til prefab.vegg. Ensidig bjelke for opplegg massivt dekke","v2disp":"A","pieces":4,"piecesAll":4},{"code":"22.C03-02","bucket":"A","ch":"22","catRows":15,"testRows":1,"views":["223-T"],"mat":["Bjelker oppsveist av profiler/plater. — 129.55 kg","Supplerende komponenter — 1 kg"],"kr":[],"res":["STÅLKONSTRUKSJONER HSQ Bjelker levert og montert. — 129.55 kg","STÅLKONSTRUKSJONER HSQ Bjelker levert og montert. — 1 kg"],"siblings":3,"sibEx":["22.C03-01","22.C03-02","22.C03-03"],"sibViews":["223-T"],"v2bucket":"A","v2where":"main","v2emoji":"✅","v2rows":3,"v2mapped":3,"v2ex":["Bjelker oppsveist av profiler/plater. — 129.55 kg","Supplerende komponenter — 1 kg","Brannisolering 3.sider.R60 — 0.6 m2"],"v2cdesc":"Stålbjelker, Hatteprofil m/feste til prefab.vegg. Tosidig","v2disp":"A","pieces":4,"piecesAll":4},{"code":"22.C05-04","bucket":"A","ch":"22","catRows":19,"testRows":5,"views":["222-I"],"mat":["Søyler av firkantformede hulprofiler — 35.1 kg","Fotplater (Enkle innstøpingsplater) — 0.11 stk"],"kr":[],"res":["STÅLKONSTRUKSJONER (HUP-profiler) , ferdig montert. — 35.1 kg","STÅLKONSTRUKSJONER Fotplater (Enkle innstøpingsplater)Inntil 10Kg/stk — 0.11 stk"],"siblings":6,"sibEx":["22.C05-01","22.C05-02","22.C05-03","22.C05-04","22.C05-05"],"sibViews":["222-I"],"v2bucket":"A","v2where":"main","v2emoji":"✅","v2rows":5,"v2mapped":5,"v2ex":["Søyler av firkantformede hulprofiler — 35.1 kg","Fotplater (Enkle innstøpingsplater) — 1.1 kg","Søyletopper (Doble plater) — 3.33333 kg","Supplerende komponenter — 1 kg"],"v2cdesc":"Stålsøyler,Hup150x150x8.Kvl.S355.(35,1kg/m) (0,579m2/m)","v2disp":"A","pieces":27,"piecesAll":27},{"code":"22.C06-91","bucket":"C","ch":"22","catRows":0,"testRows":0,"views":[],"mat":[],"kr":[],"res":[],"siblings":2,"sibEx":["22.C06-01","22.C06-02"],"sibViews":["222-I"],"v2bucket":"C","v2where":"9x","v2emoji":"⚠️","v2rows":5,"v2mapped":5,"v2ex":["Søyler av firkantformede hulprofiler — 35.1 kg","Fotplater (Enkle innstøpingsplater) — 1.1 kg","Søyletopper (Doble plater) — 3.33333 kg","Supplerende komponenter — 1 kg"],"v2cdesc":"Stålsøyler.Hup 200x100x8.Kvl. S355.(35,1kg/m) (0,579m2/m)","v2disp":"C","pieces":7,"piecesAll":7},{"code":"22.D01-91","bucket":"C","ch":"22","catRows":0,"testRows":0,"views":[],"mat":[],"kr":[],"res":[],"siblings":9,"sibEx":["22.D01-01","22.D01-02","22.D01-03","22.D01-04","22.D01-05"],"sibViews":["222-I"],"v2bucket":"C","v2where":"9x","v2emoji":"⚠️","v2rows":8,"v2mapped":5,"v2ex":["Limtresøyle 90x90 mm gran — 0.0081 m3","Limtresøyle 90x90 mm gran — 0.00081 m3","Søylesko — 0.3 pcs  ⚠needs EPD","Forskaling av fundament — 0.33 m2  ⚠needs EPD"],"v2cdesc":"Limtresøyle 90x90 mm gran","v2disp":"C","pieces":53,"piecesAll":53},{"code":"22.D01-92","bucket":"C","ch":"22","catRows":0,"testRows":0,"views":[],"mat":[],"kr":[],"res":[],"siblings":9,"sibEx":["22.D01-01","22.D01-02","22.D01-03","22.D01-04","22.D01-05"],"sibViews":["222-I"],"v2bucket":"C","v2where":"9x","v2emoji":"⚠️","v2rows":8,"v2mapped":5,"v2ex":["Limtresøyle 90x135 mm gran — 0.01215 m3","Limtresøyle 90x135 mm gran — 0.001215 m3","Søylesko — 0.3 pcs  ⚠needs EPD","Forskaling av fundament — 0.33 m2  ⚠needs EPD"],"v2cdesc":"Limtresøyle 90x135 mm gran","v2disp":"C","pieces":4,"piecesAll":4},{"code":"22.D09-91","bucket":"C","ch":"22","catRows":0,"testRows":0,"views":[],"mat":[],"kr":[],"res":[],"siblings":9,"sibEx":["22.D09-01","22.D09-02","22.D09-03","22.D09-04","22.D09-05"],"sibViews":["223-T"],"v2bucket":"C","v2where":"9x","v2emoji":"⚠️","v2rows":3,"v2mapped":2,"v2ex":["Limtre Bjelke 140X135 mm gran — 0.0189 m3","Limtre Bjelke 140X135 mm gran — 0.00189 m3","Bjelkesko — 0.8 pcs  ⚠needs EPD"],"v2cdesc":"Limtre Bjelke 140X135 mm gran","v2disp":"C","pieces":22,"piecesAll":22},{"code":"23.A01-03","bucket":"A","ch":"23","catRows":94,"testRows":2,"views":["231-T"],"mat":["Forskaling av yttervegg. Støpehøyde inntil 3,30m — 2 m2","Forskaling av steng - vegg. — 0.3 m"],"kr":["Veggform leie pr. kal. dag: Veggform 3 30m — 18 dag","Vrak   finerskift etc — 2 dag","Transport tur / retur ( kr/m2 ) — 2 kr"],"res":[],"siblings":7,"sibEx":["23.A01-01","23.A01-02","23.A01-03","23.A01-04","23.A01-05"],"sibViews":["231-T"],"v2bucket":"A","v2where":"main","v2emoji":"✅","v2rows":4,"v2mapped":3,"v2ex":["Skjøtejernskassetter for tilstøttende vegger e — 0.315 m  ⚠needs EPD","Armering med kamstenger — 35 kg","Armering med kamstenger — 35 kg","Plasstøpt betong B35 M45 - vegg — 0.25 m3"],"v2cdesc":"Betongyttervegg, t = 250mm","v2disp":"A","pieces":16,"piecesAll":16},{"code":"23.A04-03","bucket":"D","ch":"23","catRows":0,"testRows":0,"views":[],"mat":[],"kr":[],"res":[],"siblings":0,"sibEx":[],"sibViews":[],"v2bucket":"D","v2where":"","v2emoji":"","v2rows":0,"v2mapped":0,"v2ex":[],"v2cdesc":"","v2disp":"D","pieces":38,"piecesAll":38},{"code":"23.D05-04","bucket":"A","ch":"23","catRows":9,"testRows":1,"views":["231-T"],"mat":["Massiv veggelement 150mm. — 1 m2"],"kr":[],"res":["Massivtre levert og montert.pr.m3 — 0.15 m3"],"siblings":9,"sibEx":["23.D05-01","23.D05-02","23.D05-03","23.D05-04","23.D05-05"],"sibViews":["231-T"],"v2bucket":"A","v2where":"main","v2emoji":"✅","v2rows":1,"v2mapped":1,"v2ex":["Massiv veggelement 150mm. — 0.15 m3"],"v2cdesc":"Massiv veggelement 150mm.","v2disp":"A","pieces":76,"piecesAll":76},{"code":"23.D06-04","bucket":"A","ch":"23","catRows":22,"testRows":2,"views":["231-T"],"mat":["REDAir FLEX-250mm — 1 m2","Utlekting bakvegg Tre m/36x98 imp - c/c 600mm.(1,8 friksjonpl./m2)/(2,5stk.W100.skruer/m2) — 1 m2"],"kr":["Timelønn Tømrer — 0 timer","Timelønn Tømrer — 0 timer"],"res":["REDAIR PLATE 250X600X1000 — 1.1 m2","REDAIR FLEX W250 SKRUE — 0.044 pak"],"siblings":6,"sibEx":["23.D06-01","23.D06-02","23.D06-03","23.D06-04","23.D06-05"],"sibViews":["231-T"],"v2bucket":"A","v2where":"main","v2emoji":"✅","v2rows":6,"v2mapped":6,"v2ex":["REDAir FLEX-250mm — 0.25 m3","REDAir FLEX-250mm — 0.01 m3","REDAir FLEX-250mm — 0.0025 m3","Utlekting bakvegg Tre m/36x98 imp - c/c 600mm. — 0.007056 m3"],"v2cdesc":"REDAir FLEX-250mm + Utlekting 36x98imp.(Innfesting)","v2disp":"A","pieces":131,"piecesAll":131},{"code":"23.F02-03","bucket":"A","ch":"23","catRows":42,"testRows":2,"views":["232-T"],"mat":["Utlekting for kledning, utvendig. — 1 m2","Fibersementplate-(Flere platevalg i ressurs) — 1 m2"],"kr":["Timelønn Tømrer — 0 timer","Timelønn Tømrer — 1 timer","Timelønn Tømrer — 0 timer"],"res":["GRAN 36X098 K-VIRKE C24 — 2.2 m","FESTEMATR TØMRER som skuddd ,bolter etc — 0.165 pak"],"siblings":3,"sibEx":["23.F02-01","23.F02-02","23.F02-03"],"sibViews":["232-T"],"v2bucket":"A","v2where":"main","v2emoji":"✅","v2rows":15,"v2mapped":15,"v2ex":["Utlekting for kledning, utvendig. — 0.007762 m3","Utlekting for kledning, utvendig. — 0.000394 m3","Fibersementplate-(Flere platevalg i ressurs) — 7.09166 kg","Fibersementplate-(Flere platevalg i ressurs) — 1.11 kg"],"v2cdesc":"Fibersementplate","v2disp":"A","pieces":11,"piecesAll":11},{"code":"23.F04-03","bucket":"A","ch":"23","catRows":80,"testRows":3,"views":["232-T"],"mat":["Utlekting med oppretting for kledning, utvendig. — 1 m2","Sløyfer og lekter for utvendig kledning. — 1 m2"],"kr":["Timelønn Tømrer — 0 timer","Timelønn Tømrer — 0 timer","Timelønn Tømrer — 0 timer"],"res":["G-F 36X048 LEKT/REKKE KL1 — 4.4 m","FESTEMATR TØMRER som skuddd ,bolter etc — 0.165 pak"],"siblings":4,"sibEx":["23.F04-01","23.F04-02","23.F04-03","23.F04-04"],"sibViews":["232-T"],"v2bucket":"A","v2where":"main","v2emoji":"✅","v2rows":11,"v2mapped":10,"v2ex":["Utlekting med oppretting for kledning, utvendi — 0.006912 m3","Utlekting med oppretting for kledning, utvendi — 0.000259 m3","Sløyfer og lekter for utvendig kledning. — 0.00425 m3","Sløyfer og lekter for utvendig kledning. — 8.5e-05 m3"],"v2cdesc":"Liggende trekledning med dobbellfals","v2disp":"A","pieces":129,"piecesAll":129},{"code":"23.F04-91","bucket":"C","ch":"23","catRows":0,"testRows":0,"views":[],"mat":[],"kr":[],"res":[],"siblings":4,"sibEx":["23.F04-01","23.F04-02","23.F04-03","23.F04-04"],"sibViews":["232-T"],"v2bucket":"C","v2where":"9x","v2emoji":"⚠️","v2rows":10,"v2mapped":10,"v2ex":["Sløyfer og lekter for utvendig kledning. — 0.00425 m3","Sløyfer og lekter for utvendig kledning. — 8.5e-05 m3","Utlekting for kledning, utvendig. — 0.007603 m3","Utlekting for kledning, utvendig. — 0.000263 m3"],"v2cdesc":"Lektepanel mot klimavegg","v2disp":"C","pieces":15,"piecesAll":15},{"code":"23.G01-02","bucket":"A","ch":"23","catRows":17,"testRows":1,"views":["232-T"],"mat":["Glassfasade U-veridi 0,8 — 1 m2","Tillegg for dør i fasade.2-Fløyet — 0.05291 stk"],"kr":[],"res":["UE Glass/Alu -Fasade ( pris pr.m2 ) — 1 m2","UE Glass/Alu -Tillegg for dør i fasade.2-Fløyet — 0.05291 stk"],"siblings":2,"sibEx":["23.G01-01","23.G01-02"],"sibViews":["232-T"],"v2bucket":"A","v2where":"main","v2emoji":"✅","v2rows":1,"v2mapped":1,"v2ex":["Glassfasade U-veridi 0,8 — 1 m2"],"v2cdesc":"Glassfelt - etasjehøye alu/glass","v2disp":"A","pieces":52,"piecesAll":52},{"code":"23.H02-01","bucket":"D","ch":"23","catRows":0,"testRows":0,"views":[],"mat":[],"kr":[],"res":[],"siblings":0,"sibEx":[],"sibViews":[],"v2bucket":"D","v2where":"","v2emoji":"","v2rows":0,"v2mapped":0,"v2ex":[],"v2cdesc":"","v2disp":"D","pieces":93,"piecesAll":405},{"code":"23.I02-02","bucket":"D","ch":"23","catRows":0,"testRows":0,"views":[],"mat":[],"kr":[],"res":[],"siblings":0,"sibEx":[],"sibViews":[],"v2bucket":"D","v2where":"","v2emoji":"","v2rows":0,"v2mapped":0,"v2ex":[],"v2cdesc":"","v2disp":"D","pieces":2,"piecesAll":6},{"code":"23.I03-01","bucket":"D","ch":"23","catRows":0,"testRows":0,"views":[],"mat":[],"kr":[],"res":[],"siblings":0,"sibEx":[],"sibViews":[],"v2bucket":"D","v2where":"","v2emoji":"","v2rows":0,"v2mapped":0,"v2ex":[],"v2cdesc":"","v2disp":"D","pieces":11,"piecesAll":27},{"code":"23.I03-04","bucket":"D","ch":"23","catRows":0,"testRows":0,"views":[],"mat":[],"kr":[],"res":[],"siblings":0,"sibEx":[],"sibViews":[],"v2bucket":"D","v2where":"","v2emoji":"","v2rows":0,"v2mapped":0,"v2ex":[],"v2cdesc":"","v2disp":"D","pieces":27,"piecesAll":100},{"code":"23.L01-02","bucket":"B1","ch":"23","catRows":9,"testRows":0,"views":[],"mat":["1 Strøk støvbindene maling på betong klar — 1 m2","1 Strøk støvbindene maling på betong hvit — 1 m2"],"kr":[],"res":["UE Maler-Betongvegg-Støvbinding klar — 1 m2","UE Maler-Betongvegg-Støvbinding (Hvit) 1 Gang sprøytemaling — 1 m2"],"siblings":5,"sibEx":["23.L01-01","23.L01-02","23.L01-03","23.L01-04","23.L01-10"],"sibViews":[],"v2bucket":"A","v2where":"main","v2emoji":"🤖","v2rows":4,"v2mapped":0,"v2ex":["1 Strøk støvbindene maling på betong klar — 1 m2  ⚠needs EPD","1 Strøk støvbindene maling på betong hvit — 1 m2  ⚠needs EPD","2 strøk maling på betong — 1 m2  ⚠needs EPD","Normal god behandling med maling på betong K2 — 1 m2  ⚠needs EPD"],"v2cdesc":"Maling på betong ytterrvegger","v2disp":"B1","pieces":43,"piecesAll":43},{"code":"23.L01-91","bucket":"C","ch":"23","catRows":0,"testRows":0,"views":[],"mat":[],"kr":[],"res":[],"siblings":5,"sibEx":["23.L01-01","23.L01-02","23.L01-03","23.L01-04","23.L01-10"],"sibViews":[],"v2bucket":"C","v2where":"9x","v2emoji":"⚠️","v2rows":5,"v2mapped":0,"v2ex":["Forbehandling for belegg og overflate — 1 m2  ⚠needs EPD","1 Strøk støvbindene maling på gips hvit — 1 m2  ⚠needs EPD","2 strøk maling på gips — 1 m2  ⚠needs EPD","Normal god behandling med maling på gips K2 — 1 m2  ⚠needs EPD"],"v2cdesc":"Maling på gips ytterrvegger","v2disp":"C","pieces":132,"piecesAll":132},{"code":"23.L02-01","bucket":"B2","ch":"23","catRows":5,"testRows":0,"views":[],"mat":["Veggvinyl — 1 m2"],"kr":["Byggtapetserer. Gulv- og teppebelegg — 400 kr"],"res":[],"siblings":1,"sibEx":["23.L02-01"],"sibViews":[],"v2bucket":"A","v2where":"main","v2emoji":"💵","v2rows":1,"v2mapped":0,"v2ex":["Veggvinyl — 1 m2  ⚠needs EPD"],"v2cdesc":"Veggvinyl","v2disp":"B1","pieces":4,"piecesAll":4},{"code":"23.N01-06","bucket":"A","ch":"23","catRows":6,"testRows":1,"views":["232-T"],"mat":["Grunnmursplate XPS, t= 150 mm,m/duk — 1 m2"],"kr":["Timelønn Grunnarbeider — 0 timer"],"res":["DREN XPS300 150x585x2385 m/duk — 1.1 m2","Topplist til drensplate 100 mm, PR M — 0.33 m"],"siblings":7,"sibEx":["23.N01-01","23.N01-02","23.N01-03","23.N01-04","23.N01-05"],"sibViews":["232-T"],"v2bucket":"A","v2where":"main","v2emoji":"✅","v2rows":3,"v2mapped":3,"v2ex":["Grunnmursplate XPS, t= 150 mm,m/duk — 0.136364 m3","Grunnmursplate XPS, t= 150 mm,m/duk — 0.040909 m3","Grunnmursplate XPS, t= 150 mm,m/duk — 0.136364 m3"],"v2cdesc":"Grunnmursplate XPS, t= 150 mm,m/duk","v2disp":"A","pieces":11,"piecesAll":11},{"code":"24.A01-04","bucket":"A","ch":"24","catRows":65,"testRows":3,"views":[],"mat":["Forsk. av boligskillevegg. Støpehøyde inntil 3,30m — 2 m2","Forskaling av steng - vegg. — 0.3 m"],"kr":["Veggform leie pr. kal. dag: Veggform 3 30m — 13 dag","Vrak   finerskift etc — 2 dag","Transport tur / retur ( kr/m2 ) — 1 kr"],"res":[],"siblings":6,"sibEx":["24.A01-01","24.A01-02","24.A01-03","24.A01-04","24.A01-05"],"sibViews":[],"v2bucket":"A","v2where":"main","v2emoji":"🤖","v2rows":5,"v2mapped":5,"v2ex":["Armering med kamstenger — 5 kg","Armering med kamstenger — 5 kg","Armering med armeringsnett — 17.25 kg","Armering med armeringsnett — 17.25 kg"],"v2cdesc":"Betonginnervegg, t = 200mm, Boligskillevegg. Rette gjentagende vegger uten hjørner eller tilstøtende vegger. INGEN skjøtejernskassetter horisontalt eller vertikalt, INGEN sprang i OK eller UK vegg.","v2disp":"A","pieces":35,"piecesAll":35},{"code":"24.D01-08","bucket":"A","ch":"24","catRows":37,"testRows":4,"views":[],"mat":["Gipsplater std. 1-Lag — 1 m2","Bindingsverk, enkelt, for innvervegg, c/c450 — 1 m2"],"kr":["Timelønn Tømrer — 0 timer","Timelønn Tømrer — 0 timer","Timelønn Tømrer — 0 timer"],"res":["GIPSPL GNE13 F 12,5X900X3000 KLIMA NORMAL — 1.15 m2","FESTEMATR TØMRER som skuddd ,bolter etc — 0.12 pak"],"siblings":49,"sibEx":["24.D01-01","24.D01-02","24.D01-03","24.D01-04","24.D01-05"],"sibViews":[],"v2bucket":"A","v2where":"main","v2emoji":"🤖","v2rows":9,"v2mapped":9,"v2ex":["Gipsplater std. 1-Lag — 1 m2","Gipsplater std. 1-Lag — 0.1 m","Bindingsverk, enkelt, for innvervegg, c/c450 — 1 m","Bindingsverk, enkelt, for innvervegg, c/c450 — 2.5 m"],"v2cdesc":"Gyproc GS 95/95 (450) N-N M0 LydkravR'w 30 /Brann- motstand EI(A) 30.Maks.vegghøyde 6000mm.Veggtykkelse120mm","v2disp":"A","pieces":232,"piecesAll":232},{"code":"24.D01-14","bucket":"A","ch":"24","catRows":41,"testRows":5,"views":[],"mat":["Gipsplater std. 1-Lag — 1 m2","Bindingsverk, enkelt, for innvervegg, c/c450 — 1 m2"],"kr":["Timelønn Tømrer — 0 timer","Timelønn Tømrer — 0 timer","Timelønn Tømrer — 0 timer"],"res":["GIPSPL GNE13 F 12,5X900X3000 KLIMA NORMAL — 1.15 m2","FESTEMATR TØMRER som skuddd ,bolter etc — 0.12 pak"],"siblings":49,"sibEx":["24.D01-01","24.D01-02","24.D01-03","24.D01-04","24.D01-05"],"sibViews":[],"v2bucket":"A","v2where":"main","v2emoji":"🤖","v2rows":10,"v2mapped":10,"v2ex":["Gipsplater std. 1-Lag — 1 m2","Gipsplater std. 1-Lag — 0.1 m","Bindingsverk, enkelt, for innvervegg, c/c450 — 1 m","Bindingsverk, enkelt, for innvervegg, c/c450 — 2.5 m"],"v2cdesc":"Gyproc GS 95/95 (450) N-N M30 LydkravR'w 35 dB /Brann- motstand EI(A) 30.Maks.vegghøyde 6000mm.Veggtykkelse120mm","v2disp":"A","pieces":10,"piecesAll":10},{"code":"24.D01-30","bucket":"A","ch":"24","catRows":43,"testRows":5,"views":[],"mat":["Gipsplater std. 2-Lag — 1 m2","Bindingsverk, enkelt, for innvervegg, c/c450 — 1 m2"],"kr":["Timelønn Tømrer — 0 timer","Timelønn Tømrer — 0 timer","Timelønn Tømrer — 0 timer"],"res":["GIPSPL GNE13 F 12,5X900X3000 KLIMA NORMAL — 2.3 m2","FESTEMATR TØMRER som skuddd ,bolter etc — 0.176 pak"],"siblings":49,"sibEx":["24.D01-01","24.D01-02","24.D01-03","24.D01-04","24.D01-05"],"sibViews":[],"v2bucket":"A","v2where":"main","v2emoji":"🤖","v2rows":10,"v2mapped":10,"v2ex":["Gipsplater std. 2-Lag — 2 m2","Gipsplater std. 2-Lag — 0.1 m","Bindingsverk, enkelt, for innvervegg, c/c450 — 1 m","Bindingsverk, enkelt, for innvervegg, c/c450 — 2.5 m"],"v2cdesc":"Gyproc GS 95/95 (450) NN-NN M30 LydkravR'w 40 dB /Brann- motstand EI(A) 60.Maks.vegghøyde 6450mm.Veggtykkelse145mm","v2disp":"A","pieces":241,"piecesAll":241},{"code":"24.D01-91","bucket":"C","ch":"24","catRows":0,"testRows":0,"views":[],"mat":[],"kr":[],"res":[],"siblings":49,"sibEx":["24.D01-01","24.D01-02","24.D01-03","24.D01-04","24.D01-05"],"sibViews":[],"v2bucket":"C","v2where":"9x","v2emoji":"⚠️","v2rows":6,"v2mapped":5,"v2ex":["Gipsplater std. 1-Lag — 1 m2","Gipsplater std. 1-Lag — 0.1 m","Bindingsverk, enkelt, for innvervegg, c/c450 — 1 m","Bindingsverk, enkelt, for innvervegg, c/c450 — 2.5 m"],"v2cdesc":"Gyproc GS 70/70 (450) N-0 M0 LydkravR'w 25-30 dB /Brann- motstand EI(A) 30 /Maks.vegghøyde 3400 mm/ Veggtykkelse 95 mm","v2disp":"C","pieces":125,"piecesAll":125},{"code":"24.D01-92","bucket":"C","ch":"24","catRows":0,"testRows":0,"views":[],"mat":[],"kr":[],"res":[],"siblings":49,"sibEx":["24.D01-01","24.D01-02","24.D01-03","24.D01-04","24.D01-05"],"sibViews":[],"v2bucket":"C","v2where":"9x","v2emoji":"⚠️","v2rows":6,"v2mapped":5,"v2ex":["Gipsplater Brannplate, t = 2 x 15 mm — 2 m2","Gipsplater Brannplate, t = 2 x 15 mm — 0.1 m","Bindingsverk, enkelt, for innvervegg, c/c450 — 1 m","Bindingsverk, enkelt, for innvervegg, c/c450 — 2.5 m"],"v2cdesc":"Gyproc GS 70/70 (450) PP-0 M0 LydkravR'w 25-30 dB /Brann- motstand EI(A) 60 /Maks.vegghøyde 3550 mm/ Veggtykkelse 101 mm","v2disp":"C","pieces":8,"piecesAll":8},{"code":"24.D02-45","bucket":"A","ch":"24","catRows":43,"testRows":5,"views":[],"mat":["Gipsplater std. 2-Lag — 1 m2","Bindingsverk, enkelt, for innvervegg, c/c450 — 1 m2"],"kr":["Timelønn Tømrer — 0 timer","Timelønn Tømrer — 0 timer","Timelønn Tømrer — 0 timer"],"res":["GIPSPL GNE13 F 12,5X900X3000 KLIMA NORMAL — 2.3 m2","FESTEMATR TØMRER som skuddd ,bolter etc — 0.176 pak"],"siblings":60,"sibEx":["24.D02-01","24.D02-02","24.D02-03","24.D02-04","24.D02-05"],"sibViews":[],"v2bucket":"A","v2where":"main","v2emoji":"🤖","v2rows":10,"v2mapped":10,"v2ex":["Gipsplater std. 2-Lag — 2 m2","Gipsplater std. 2-Lag — 0.1 m","Bindingsverk, enkelt, for innvervegg, c/c450 — 1 m","Bindingsverk, enkelt, for innvervegg, c/c450 — 2.5 m"],"v2cdesc":"Gyproc XR 95/95 (450) NN-NN M45 LydkravR'w 48-52dB /Brann- motstand EI(A) 60.Maks.vegghøyde 6800mm.Veggtykkelse145mm","v2disp":"A","pieces":81,"piecesAll":81},{"code":"24.D02-55","bucket":"A","ch":"24","catRows":41,"testRows":5,"views":[],"mat":["Gipsplater std. 2-Lag — 1 m2","Bindingsverk, enkelt, for innvervegg, c/c450 — 2 m2"],"kr":["Timelønn Tømrer — 0 timer","Timelønn Tømrer — 1 timer","Timelønn Tømrer — 0 timer"],"res":["GIPSPL GNE13 F 12,5X900X3000 KLIMA NORMAL — 2.3 m2","FESTEMATR TØMRER som skuddd ,bolter etc — 0.176 pak"],"siblings":60,"sibEx":["24.D02-01","24.D02-02","24.D02-03","24.D02-04","24.D02-05"],"sibViews":[],"v2bucket":"A","v2where":"main","v2emoji":"🤖","v2rows":9,"v2mapped":8,"v2ex":["Gipsplater std. 2-Lag — 2 m2","Gipsplater std. 2-Lag — 0.1 m","Bindingsverk, enkelt, for innvervegg, c/c450 — 2 m","Bindingsverk, enkelt, for innvervegg, c/c450 — 5 m"],"v2cdesc":"Gyproc XR 70/70X2 (450) NN-NN M140 LydkravR'w 56-60 dB /Brann- motstand EI(A) 60. Maks.vegghøyde 3650mm.Veggtykkelse MIN 200mm","v2disp":"A","pieces":59,"piecesAll":59},{"code":"24.D04-02","bucket":"A","ch":"24","catRows":34,"testRows":6,"views":[],"mat":["Gipsplater std. 1-Lag — 1 m2","Gipsplate bunn og litt på siden — 0.2 m2"],"kr":["Timelønn Tømrer — 0 timer","Timelønn Tømrer — 0 timer","Timelønn Tømrer — 0 timer"],"res":["GIPSPL GNE13 F 12,5X900X3000 KLIMA NORMAL — 1.15 m2","FESTEMATR TØMRER som skuddd ,bolter etc — 0.12 pak"],"siblings":4,"sibEx":["24.D04-01","24.D04-02","24.D04-03","24.D04-04"],"sibViews":[],"v2bucket":"A","v2where":"main","v2emoji":"🤖","v2rows":10,"v2mapped":9,"v2ex":["Gipsplater std. 1-Lag — 1 m2","Gipsplater std. 1-Lag — 0.1 m","Gipsplate bunn og litt på siden — 0.2 m2","Gipsplate bunn og litt på siden — 0.02 m"],"v2cdesc":"Komplett skjørt stål.100mm.Ei30/34Db. 50mm isolason.Ei30 , R`w=34Db.1+1-lag gips","v2disp":"A","pieces":90,"piecesAll":90},{"code":"24.D05-02","bucket":"A","ch":"24","catRows":31,"testRows":3,"views":[],"mat":["Bindingsverk, enkelt, for innvervegg, c/c450 — 1 m2","Åpning i gips-innervegg. Dim. 8 - 10 x 21 M — 0.4 stk"],"kr":["Timelønn Tømrer — 0 timer","Timelønn Tømrer — 0 timer","Timelønn Tømrer — 0 timer"],"res":["STÅLPR SK45 SKINNE 3600 GYPROC — 1.1 lm","STÅLPR ER45 STENDER 35X45X2530 — 2.75 lm"],"siblings":5,"sibEx":["24.D05-01","24.D05-02","24.D05-03","24.D05-04","24.D05-05"],"sibViews":[],"v2bucket":"A","v2where":"main","v2emoji":"🤖","v2rows":6,"v2mapped":6,"v2ex":["Bindingsverk, enkelt, for innvervegg, c/c450 — 1 m","Bindingsverk, enkelt, for innvervegg, c/c450 — 2.5 m","Åpning i gips-innervegg. Dim. 8 - 10 x 21 M — 2.8 m","Åpning i gips-innervegg. Dim. 8 - 10 x 21 M — 0.006452 m3"],"v2cdesc":"Påforing kabin mot leilighet Gyproc GS 45/45 (450) N-0 M0./Veggtykkelse 57 mm","v2disp":"A","pieces":128,"piecesAll":128},{"code":"24.G03-01","bucket":"D","ch":"24","catRows":0,"testRows":0,"views":[],"mat":[],"kr":[],"res":[],"siblings":0,"sibEx":[],"sibViews":[],"v2bucket":"D","v2where":"","v2emoji":"","v2rows":0,"v2mapped":0,"v2ex":[],"v2cdesc":"","v2disp":"D","pieces":132,"piecesAll":491},{"code":"24.G03-91","bucket":"D","ch":"24","catRows":0,"testRows":0,"views":[],"mat":[],"kr":[],"res":[],"siblings":0,"sibEx":[],"sibViews":[],"v2bucket":"D","v2where":"","v2emoji":"","v2rows":0,"v2mapped":0,"v2ex":[],"v2cdesc":"","v2disp":"D","pieces":20,"piecesAll":57},{"code":"24.G03-91-D","bucket":"D","ch":"24","catRows":0,"testRows":0,"views":[],"mat":[],"kr":[],"res":[],"siblings":0,"sibEx":[],"sibViews":[],"v2bucket":"D","v2where":"","v2emoji":"","v2rows":0,"v2mapped":0,"v2ex":[],"v2cdesc":"","v2disp":"D","pieces":44,"piecesAll":125},{"code":"24.G04-01","bucket":"D","ch":"24","catRows":0,"testRows":0,"views":[],"mat":[],"kr":[],"res":[],"siblings":0,"sibEx":[],"sibViews":[],"v2bucket":"D","v2where":"","v2emoji":"","v2rows":0,"v2mapped":0,"v2ex":[],"v2cdesc":"","v2disp":"D","pieces":121,"piecesAll":487},{"code":"24.G05-91","bucket":"D","ch":"24","catRows":0,"testRows":0,"views":[],"mat":[],"kr":[],"res":[],"siblings":0,"sibEx":[],"sibViews":[],"v2bucket":"D","v2where":"","v2emoji":"","v2rows":0,"v2mapped":0,"v2ex":[],"v2cdesc":"","v2disp":"D","pieces":32,"piecesAll":106},{"code":"24.G08-02","bucket":"D","ch":"24","catRows":0,"testRows":0,"views":[],"mat":[],"kr":[],"res":[],"siblings":0,"sibEx":[],"sibViews":[],"v2bucket":"D","v2where":"","v2emoji":"","v2rows":0,"v2mapped":0,"v2ex":[],"v2cdesc":"","v2disp":"D","pieces":1,"piecesAll":3},{"code":"24.G09-04","bucket":"D","ch":"24","catRows":0,"testRows":0,"views":[],"mat":[],"kr":[],"res":[],"siblings":0,"sibEx":[],"sibViews":[],"v2bucket":"D","v2where":"","v2emoji":"","v2rows":0,"v2mapped":0,"v2ex":[],"v2cdesc":"","v2disp":"D","pieces":33,"piecesAll":172},{"code":"24.L01-01","bucket":"B1","ch":"24","catRows":14,"testRows":0,"views":[],"mat":["Forbehandling for belegg og overflate — 1 m2","1 Strøk støvbindene maling på gips hvit — 1 m2"],"kr":[],"res":["UE Maler-Gipsvegg-Forbeh.gipsvegg for belegg/overflate — 1 m2","UE Maler-Gipsvegg-Støvbinding gipsvegg — 1 m2"],"siblings":9,"sibEx":["24.L01-01","24.L01-02","24.L01-03","24.L01-04","24.L01-50"],"sibViews":[],"v2bucket":"A","v2where":"main","v2emoji":"🤖","v2rows":5,"v2mapped":0,"v2ex":["Forbehandling for belegg og overflate — 1 m2  ⚠needs EPD","1 Strøk støvbindene maling på gips hvit — 1 m2  ⚠needs EPD","2 strøk maling på gips — 1 m2  ⚠needs EPD","Normal god behandling med maling på gips K2 — 1 m2  ⚠needs EPD"],"v2cdesc":"Maling på gips innervegger","v2disp":"B1","pieces":1645,"piecesAll":1645},{"code":"24.L01-02","bucket":"B1","ch":"24","catRows":9,"testRows":0,"views":[],"mat":["Støvbinding klar — 1 m2","Støvbinding (Hvit) 1 Gang sprøytemaling — 1 m2"],"kr":[],"res":["UE Maler-Betongvegg-Støvbinding klar — 1 m2","UE Maler-Betongvegg-Støvbinding (Hvit) 1 Gang sprøytemaling — 1 m2"],"siblings":9,"sibEx":["24.L01-01","24.L01-02","24.L01-03","24.L01-04","24.L01-50"],"sibViews":[],"v2bucket":"A","v2where":"main","v2emoji":"🤖","v2rows":4,"v2mapped":0,"v2ex":["Støvbinding klar — 1 m2  ⚠needs EPD","Støvbinding (Hvit) 1 Gang sprøytemaling — 1 m2  ⚠needs EPD","2 strøk maling på betong — 1 m2  ⚠needs EPD","Normal god behandling med maling på betong K2 — 1 m2  ⚠needs EPD"],"v2cdesc":"Maling på betong innervegger","v2disp":"B1","pieces":84,"piecesAll":84},{"code":"24.L01-91","bucket":"C","ch":"24","catRows":0,"testRows":0,"views":[],"mat":[],"kr":[],"res":[],"siblings":9,"sibEx":["24.L01-01","24.L01-02","24.L01-03","24.L01-04","24.L01-50"],"sibViews":[],"v2bucket":"C","v2where":"9x","v2emoji":"⚠️","v2rows":5,"v2mapped":0,"v2ex":["Forbehandling for belegg og overflate — 1 m2  ⚠needs EPD","1 Strøk støvbindene maling på gips hvit — 1 m2  ⚠needs EPD","2 strøk maling på gips — 1 m2  ⚠needs EPD","Normal god behandling med maling på gips K2 — 1 m2  ⚠needs EPD"],"v2cdesc":"Maling på gips innervegger","v2disp":"C","pieces":103,"piecesAll":103},{"code":"24.L02-01","bucket":"B2","ch":"24","catRows":3,"testRows":0,"views":[],"mat":["Veggvinyl bak toaletter/hele vegger — 1 m2"],"kr":["Byggtapetserer. Gulv- og teppebelegg — 595 kr"],"res":[],"siblings":2,"sibEx":["24.L02-01","24.L02-02"],"sibViews":[],"v2bucket":"A","v2where":"main","v2emoji":"💵","v2rows":1,"v2mapped":0,"v2ex":["Veggvinyl bak toaletter/hele vegger — 1 m2  ⚠needs EPD"],"v2cdesc":"Veggvinyl","v2disp":"B1","pieces":52,"piecesAll":52},{"code":"24.L02-02","bucket":"B2","ch":"24","catRows":7,"testRows":0,"views":[],"mat":["Sparkling og grunning glans 07 — 1 m2","Tekstiltapeter-VESCOM Ecolin på ferdig underlag — 1 m2"],"kr":["UE MALERARBEIDER — 50 kr","Byggtapetserer. Gulv- og teppebelegg — 1 150 kr"],"res":[],"siblings":2,"sibEx":["24.L02-01","24.L02-02"],"sibViews":[],"v2bucket":"A","v2where":"main","v2emoji":"💵","v2rows":2,"v2mapped":0,"v2ex":["Sparkling og grunning glans 07 — 1 m2  ⚠needs EPD","Tekstiltapeter-VESCOM Ecolin på ferdig underla — 1 m2  ⚠needs EPD"],"v2cdesc":"Tekstiltapeter","v2disp":"B1","pieces":12,"piecesAll":12},{"code":"24.L03-92","bucket":"C","ch":"24","catRows":0,"testRows":0,"views":[],"mat":[],"kr":[],"res":[],"siblings":5,"sibEx":["24.L03-01","24.L03-03","24.L03-04","24.L03-05","24.L03-10"],"sibViews":[],"v2bucket":"CD","v2where":"","v2emoji":"","v2rows":0,"v2mapped":0,"v2ex":[],"v2cdesc":"","v2disp":"CD","pieces":64,"piecesAll":64},{"code":"24.L04-01","bucket":"B3","ch":"24","catRows":21,"testRows":0,"views":[],"mat":["Flis på innervegg UE — 1 m2"],"kr":[],"res":[],"siblings":2,"sibEx":["24.L04-01","24.L04-02"],"sibViews":[],"v2bucket":"A","v2where":"main","v2emoji":"💵","v2rows":1,"v2mapped":0,"v2ex":["Flis på innervegg UE — 1 m2  ⚠needs EPD"],"v2cdesc":"Flis på innervegg","v2disp":"B1","pieces":60,"piecesAll":60},{"code":"24.M03-91","bucket":"D","ch":"24","catRows":0,"testRows":0,"views":[],"mat":[],"kr":[],"res":[],"siblings":0,"sibEx":[],"sibViews":[],"v2bucket":"D","v2where":"","v2emoji":"","v2rows":0,"v2mapped":0,"v2ex":[],"v2cdesc":"","v2disp":"D","pieces":389,"piecesAll":389},{"code":"24.M03-92","bucket":"D","ch":"24","catRows":0,"testRows":0,"views":[],"mat":[],"kr":[],"res":[],"siblings":0,"sibEx":[],"sibViews":[],"v2bucket":"D","v2where":"","v2emoji":"","v2rows":0,"v2mapped":0,"v2ex":[],"v2cdesc":"","v2disp":"D","pieces":287,"piecesAll":287},{"code":"24.M04-02","bucket":"D","ch":"24","catRows":0,"testRows":0,"views":[],"mat":[],"kr":[],"res":[],"siblings":0,"sibEx":[],"sibViews":[],"v2bucket":"D","v2where":"","v2emoji":"","v2rows":0,"v2mapped":0,"v2ex":[],"v2cdesc":"","v2disp":"D","pieces":72,"piecesAll":145},{"code":"25.A03-01","bucket":"A","ch":"25","catRows":52,"testRows":3,"views":["252-I"],"mat":["Glidesjikt av plast, t = 0,20mm — 1 m2","Forskaling av dekkesteng med finer. — 0.2 m"],"kr":["Timelønn Betongarbeider — 0 timer","Spiker-skudd-støpelister-Exp.bolter — 1 kr","Timelønn Betongarbeider — 0 timer"],"res":["PLASTFOLIE 0,2MM 50M JACKON — 0.0108 stk","KRYSSF OLJET GRAN 15MM. 1500x750 Ombruk 2-5 Peri -31.10.23 — 0.0275 m2"],"siblings":14,"sibEx":["25.A03-01","25.A03-02","25.A03-10","25.A03-11","25.A03-12"],"sibViews":["252-I"],"v2bucket":"A","v2where":"main","v2emoji":"✅","v2rows":8,"v2mapped":6,"v2ex":["Glidesjikt av plast, t = 0,20mm — 1 m2","Forskaling av støpeskjøt — 0.07 m  ⚠needs EPD","Forskaling av støpeskjøt — 0.1 m  ⚠needs EPD","Armering med kamstenger — 30 kg"],"v2cdesc":"Bunnplate, t = 250mm.","v2disp":"A","pieces":4,"piecesAll":4},{"code":"25.A03-91","bucket":"C","ch":"25","catRows":0,"testRows":0,"views":[],"mat":[],"kr":[],"res":[],"siblings":14,"sibEx":["25.A03-01","25.A03-02","25.A03-10","25.A03-11","25.A03-12"],"sibViews":["252-I"],"v2bucket":"C","v2where":"9x","v2emoji":"⚠️","v2rows":8,"v2mapped":6,"v2ex":["Glidesjikt av plast, t = 0,20mm — 1 m2","Forskaling av støpeskjøt — 0.07 m  ⚠needs EPD","Forskaling av støpeskjøt — 0.1 m  ⚠needs EPD","Armering med kamstenger — 30 kg"],"v2cdesc":"Bunnplate, t = 250mm.","v2disp":"C","pieces":2,"piecesAll":2},{"code":"25.C01-03","bucket":"A","ch":"25","catRows":85,"testRows":4,"views":["251-I"],"mat":["Slakarmert plattendekke. (legg inn 60mm DO kjeller) — 0.7 m2","Forspent plattendekke. (legg inn 80mm DO kjeller) — 0.3 m2"],"kr":["Timelønn Betongarbeider — 0 timer","Timelønn Betongarbeider — 0 timer","Reis Trad forsk: Støtter  pute  strø inntil 3 7m — 16 dag"],"res":["Plattendekke 50mm.Slakkarmert.(SA/XC1) Inkl.Gitterdragere inntil 2,1kg/m2 og armering 7,5 kg/m2.Ink.Lavkarbon kl.A — 0.7 m2","Plattendekker transport - Regnet 180m2/lass — 0.7 m2"],"siblings":5,"sibEx":["25.C01-01","25.C01-02","25.C01-03","25.C01-04","25.C01-05"],"sibViews":["251-I"],"v2bucket":"A","v2where":"main","v2emoji":"✅","v2rows":11,"v2mapped":10,"v2ex":["Slakarmert plattendekke. (legg inn 60mm DO kje — 0.7 m2","Slakarmert plattendekke. (legg inn 60mm DO kje — 0.7 m2","Slakarmert plattendekke. (legg inn 60mm DO kje — 1.4 m2","Forspent plattendekke. (legg inn 80mm DO kjell — 0.3 m2"],"v2cdesc":"Plattendekke + påstøp = 300mm.","v2disp":"A","pieces":2,"piecesAll":2},{"code":"25.E01-02","bucket":"B1","ch":"25","catRows":39,"testRows":0,"views":[],"mat":["Forskaling av steng - påstøp. — 0.3 m","Forskaling av støpeskjøt. — 0.1 m"],"kr":["Spiker-skudd-støpelister-Exp.bolter — 2 kr","Timelønn Betongarbeider — 0 timer","Timelønn Betongarbeider — 0 timer"],"res":["GRAN 48X098 K-VIRKE C14 — 0.297 m"],"siblings":5,"sibEx":["25.E01-01","25.E01-02","25.E01-03","25.E01-04","25.E01-05"],"sibViews":[],"v2bucket":"A","v2where":"main","v2emoji":"🤖","v2rows":4,"v2mapped":2,"v2ex":["Armering med armeringsnett. — 2.1 kg  ⚠needs EPD","Armering med armeringsnett. — 2.1 kg  ⚠needs EPD","Plasstøpt betong. — 0.08 m3","Plasstøpt betong. — 0.08 m3"],"v2cdesc":"Påstøp, t = 80mm.","v2disp":"B1","pieces":2,"piecesAll":2},{"code":"25.E01-91","bucket":"C","ch":"25","catRows":0,"testRows":0,"views":[],"mat":[],"kr":[],"res":[],"siblings":5,"sibEx":["25.E01-01","25.E01-02","25.E01-03","25.E01-04","25.E01-05"],"sibViews":[],"v2bucket":"C","v2where":"9x","v2emoji":"⚠️","v2rows":4,"v2mapped":2,"v2ex":["Armering med armeringsnett. — 2.1 kg  ⚠needs EPD","Armering med armeringsnett. — 2.1 kg  ⚠needs EPD","Plasstøpt betong. — 0.06 m3","Plasstøpt betong. — 0.06 m3"],"v2cdesc":"Påstøp, t = 60mm.","v2disp":"C","pieces":10,"piecesAll":10},{"code":"25.F01-91","bucket":"C","ch":"25","catRows":0,"testRows":0,"views":[],"mat":[],"kr":[],"res":[],"siblings":3,"sibEx":["25.F01-01","25.F01-02","25.F01-03"],"sibViews":["251-I"],"v2bucket":"C","v2where":"9x","v2emoji":"⚠️","v2rows":1,"v2mapped":1,"v2ex":["Massiv 140mm. — 0.14 m3"],"v2cdesc":"Massivtre, 140mm","v2disp":"C","pieces":6,"piecesAll":6},{"code":"25.G01-91","bucket":"C","ch":"25","catRows":0,"testRows":0,"views":[],"mat":[],"kr":[],"res":[],"siblings":3,"sibEx":["25.G01-01","25.G01-02","25.G01-03"],"sibViews":[],"v2bucket":"C","v2where":"9x","v2emoji":"⚠️","v2rows":4,"v2mapped":4,"v2ex":["Nedlekting for himling 23 x 48 mmm — 0.004857 m3","Nedlekting for himling 23 x 48 mmm — 0.000364 m3","Gipsplater i himling std. 1-Lag — 1 m2","Gipsplater i himling std. 1-Lag — 0.2 m2"],"v2cdesc":"Fast himling, t = 23 mm lekt + 13 mm gips","v2disp":"C","pieces":29,"piecesAll":29},{"code":"25.G05-02","bucket":"B1","ch":"25","catRows":56,"testRows":0,"views":[],"mat":["Nedlekting for himling med lydbøyle — 1 m2","Gipsplater i himling std. 2-Lag — 1 m2"],"kr":["Timelønn Tømrer — 0 timer","Timelønn Tømrer — 1 timer"],"res":["LYDBØYLE PK D ROCKWOOL — 2 stk","G-F 30X048 LEKT/REKKE KL1 — 4.4 m"],"siblings":3,"sibEx":["25.G05-01","25.G05-02","25.G05-03"],"sibViews":[],"v2bucket":"A","v2where":"main","v2emoji":"🤖","v2rows":3,"v2mapped":2,"v2ex":["Nedlekting for himling med lydbøyle — 2 pcs  ⚠needs EPD","Nedlekting for himling med lydbøyle — 0.00576 m3","Gipsplater i himling std. 2-Lag — 2 m2"],"v2cdesc":"Fast himling med lydbøyler, t = 30 mm lekt + 2x13 mm gips","v2disp":"B1","pieces":1,"piecesAll":1},{"code":"25.G06-91","bucket":"C","ch":"25","catRows":0,"testRows":0,"views":[],"mat":[],"kr":[],"res":[],"siblings":2,"sibEx":["25.G06-01","25.G06-02"],"sibViews":[],"v2bucket":"C","v2where":"9x","v2emoji":"⚠️","v2rows":2,"v2mapped":1,"v2ex":["Nedlekting for himling 30 x48 mm — 0.00576 m3","Spilehimling Sibirsk lerk — 20 m  ⚠needs EPD"],"v2cdesc":"Innvendig spile-himling - 45x45(73)mm.Lerk","v2disp":"C","pieces":5,"piecesAll":5},{"code":"25.H01-03","bucket":"B1","ch":"25","catRows":5,"testRows":0,"views":[],"mat":["Systemhimling, 20x600x600 mm. A-kant, t profil. — 1 m2","UE HIM.Tillegg pr.m2 snitt for uttak,sprang etc. div uten CO2 — 1 m2"],"kr":[],"res":["UE Sys.him.mineralull A-kant 600x600.Std hvit. — 1.05 m2","UE HIM.Tillegg pr.m2 snitt for uttak,sprang etc. div uten CO2 — 1.05 m2"],"siblings":8,"sibEx":["25.H01-01","25.H01-02","25.H01-03","25.H01-04","25.H01-05"],"sibViews":[],"v2bucket":"A","v2where":"main","v2emoji":"🤖","v2rows":1,"v2mapped":0,"v2ex":["Systemhimling, 20x600x600 mm. A-kant, t profil — 1 m2  ⚠needs EPD"],"v2cdesc":"Systemhimling, t = 20x600x600 mm. A-kant , t profil","v2disp":"B1","pieces":112,"piecesAll":112},{"code":"25.H01-06","bucket":"B1","ch":"25","catRows":5,"testRows":0,"views":[],"mat":["Systemhimling, 20x1200x600 mm. E-kant t profil. — 1 m2","UE HIM.Tillegg pr.m2 snitt for uttak,sprang etc. div uten CO2 — 1 m2"],"kr":[],"res":["UE Sys.him.mineralull E-kant 600x1200.Std.hvit. — 1.05 m2","UE HIM.Tillegg pr.m2 snitt for uttak,sprang etc. div uten CO2 — 1.05 m2"],"siblings":8,"sibEx":["25.H01-01","25.H01-02","25.H01-03","25.H01-04","25.H01-05"],"sibViews":[],"v2bucket":"A","v2where":"main","v2emoji":"🤖","v2rows":1,"v2mapped":0,"v2ex":["Systemhimling, 20x1200x600 mm. E-kant t profil — 1 m2  ⚠needs EPD"],"v2cdesc":"Systemhimling, t = 20x1200x600 mm.E-kant, t profil","v2disp":"B1","pieces":159,"piecesAll":159},{"code":"25.H01-91","bucket":"C","ch":"25","catRows":0,"testRows":0,"views":[],"mat":[],"kr":[],"res":[],"siblings":8,"sibEx":["25.H01-01","25.H01-02","25.H01-03","25.H01-04","25.H01-05"],"sibViews":[],"v2bucket":"C","v2where":"9x","v2emoji":"⚠️","v2rows":1,"v2mapped":0,"v2ex":["Systemhimling, 20x600x600 mm gips, t profil. — 1 m2  ⚠needs EPD"],"v2cdesc":"Systemhimling, t = 20x600x600 mm gips, t profil","v2disp":"C","pieces":12,"piecesAll":12},{"code":"25.H02-01","bucket":"B1","ch":"25","catRows":5,"testRows":0,"views":[],"mat":["Systemhimling, 20x600x600 mm. Hygiene A-kant, t profil — 1 m2","UE HIM.Tillegg pr.m2 snitt for uttak,sprang etc. div uten CO2 — 1 m2"],"kr":[],"res":["UE Sys.him.Hygiene A-kant 600x600.Std hvit. — 1.05 m2","UE HIM.Tillegg pr.m2 snitt for uttak,sprang etc. div uten CO2 — 1.05 m2"],"siblings":4,"sibEx":["25.H02-01","25.H02-02","25.H02-03","25.H02-04"],"sibViews":[],"v2bucket":"A","v2where":"main","v2emoji":"🤖","v2rows":1,"v2mapped":0,"v2ex":["Systemhimling, 20x600x600 mm. Hygiene A-kant,  — 1 m2  ⚠needs EPD"],"v2cdesc":"Systemhimling, t = 20x600x600 mm. Hygiene A-kant , t profil","v2disp":"B1","pieces":13,"piecesAll":13},{"code":"25.H04-91","bucket":"C","ch":"25","catRows":0,"testRows":0,"views":[],"mat":[],"kr":[],"res":[],"siblings":3,"sibEx":["25.H04-01","25.H04-02","25.H04-03"],"sibViews":[],"v2bucket":"C","v2where":"9x","v2emoji":"⚠️","v2rows":1,"v2mapped":0,"v2ex":["Systemhimling, t = 120mm, garasjehimling, t pr — 1 m2  ⚠needs EPD"],"v2cdesc":"Systemhimling, t = 120mm, garasjehimling, t profil","v2disp":"C","pieces":2,"piecesAll":2},{"code":"25.I01-91","bucket":"C","ch":"25","catRows":0,"testRows":0,"views":[],"mat":[],"kr":[],"res":[],"siblings":5,"sibEx":["25.I01-01","25.I01-02","25.I01-03","25.I01-04","25.I01-05"],"sibViews":[],"v2bucket":"C","v2where":"9x","v2emoji":"⚠️","v2rows":3,"v2mapped":0,"v2ex":["Gulvavretting - plasstøpte dekker — 1 m2  ⚠needs EPD","Gulvavretting - plasstøpte dekker — 8.5 kg  ⚠needs EPD","Gulvavretting - plasstøpte dekker — 0.3 m  ⚠needs EPD"],"v2cdesc":"Gulvavretting - plasstøpte dekker","v2disp":"C","pieces":3,"piecesAll":3},{"code":"25.I01-92","bucket":"C","ch":"25","catRows":0,"testRows":0,"views":[],"mat":[],"kr":[],"res":[],"siblings":5,"sibEx":["25.I01-01","25.I01-02","25.I01-03","25.I01-04","25.I01-05"],"sibViews":[],"v2bucket":"C","v2where":"9x","v2emoji":"⚠️","v2rows":3,"v2mapped":0,"v2ex":["Gulvavretting - hulldekker — 1 m2  ⚠needs EPD","Gulvavretting - hulldekker — 8.5 kg  ⚠needs EPD","Gulvavretting - hulldekker — 0.3 m  ⚠needs EPD"],"v2cdesc":"Gulvavretting - hulldekker","v2disp":"C","pieces":161,"piecesAll":161},{"code":"25.I03-03","bucket":"B2","ch":"25","catRows":25,"testRows":0,"views":[],"mat":["Flekk og skjøtsparkling — 1 m2","Forbo Sphera Energetic med 100 mm oppbrett — 1 m2"],"kr":["Byggtapetserer. Gulv- og teppebelegg — 44 kr","Byggtapetserer. Gulv- og teppebelegg — 490 kr","Byggtapetserer. Gulv- og teppebelegg — 110 kr"],"res":[],"siblings":9,"sibEx":["25.I03-03","25.I03-04","25.I03-05","25.I03-06","25.I03-07"],"sibViews":[],"v2bucket":"A","v2where":"main","v2emoji":"💵","v2rows":4,"v2mapped":0,"v2ex":["Flekk og skjøtsparkling — 1 m2  ⚠needs EPD","Forbo Sphera Energetic med 100 mm oppbrett — 1 m2  ⚠needs EPD","Oppbrett 100mm — 0.8 m  ⚠needs EPD","Fjerning av melkepapp — 1 m2  ⚠needs EPD"],"v2cdesc":"Vinyl 2,0 mm","v2disp":"B1","pieces":216,"piecesAll":216},{"code":"25.I03-04","bucket":"B2","ch":"25","catRows":19,"testRows":0,"views":[],"mat":["Flekk og skjøtsparkling — 1 m2","Tarkett Optima 2-3dB Ikke oppbrett — 1 m2"],"kr":["Byggtapetserer. Gulv- og teppebelegg — 44 kr","Byggtapetserer. Gulv- og teppebelegg — 398 kr","Byggtapetserer. Gulv- og teppebelegg — 110 kr"],"res":[],"siblings":9,"sibEx":["25.I03-03","25.I03-04","25.I03-05","25.I03-06","25.I03-07"],"sibViews":[],"v2bucket":"A","v2where":"main","v2emoji":"💵","v2rows":4,"v2mapped":0,"v2ex":["Flekk og skjøtsparkling — 1 m2  ⚠needs EPD","Tarkett Optima 2-3dB Ikke oppbrett — 1 m2  ⚠needs EPD","Oppbrett 100mm — 0.8 m  ⚠needs EPD","Fjerning av melkepapp — 1 m2  ⚠needs EPD"],"v2cdesc":"Vinyl vanntett 2,0 mm","v2disp":"B1","pieces":17,"piecesAll":17},{"code":"25.I03-91","bucket":"C","ch":"25","catRows":0,"testRows":0,"views":[],"mat":[],"kr":[],"res":[],"siblings":9,"sibEx":["25.I03-03","25.I03-04","25.I03-05","25.I03-06","25.I03-07"],"sibViews":[],"v2bucket":"CD","v2where":"","v2emoji":"","v2rows":0,"v2mapped":0,"v2ex":[],"v2cdesc":"","v2disp":"CD","pieces":63,"piecesAll":63},{"code":"25.I03-92","bucket":"C","ch":"25","catRows":0,"testRows":0,"views":[],"mat":[],"kr":[],"res":[],"siblings":9,"sibEx":["25.I03-03","25.I03-04","25.I03-05","25.I03-06","25.I03-07"],"sibViews":[],"v2bucket":"CD","v2where":"","v2emoji":"","v2rows":0,"v2mapped":0,"v2ex":[],"v2cdesc":"","v2disp":"CD","pieces":3,"piecesAll":3},{"code":"25.I05-02","bucket":"B1","ch":"25","catRows":5,"testRows":0,"views":[],"mat":["Epoksy maling — 1 m2","Epoksymalt sokkel 70mm — 1 m"],"kr":[],"res":["UE Maler-Epoksy maling av betonggulv — 1 m2","UE Maler-Epoxymalt sokkel 70mm — 1 m"],"siblings":3,"sibEx":["25.I05-01","25.I05-02","25.I05-03"],"sibViews":[],"v2bucket":"A","v2where":"main","v2emoji":"🤖","v2rows":2,"v2mapped":0,"v2ex":["Epoksy maling — 1 m2  ⚠needs EPD","Epoksymalt sokkel 70mm — 1 m  ⚠needs EPD"],"v2cdesc":"Epoksy maling","v2disp":"B1","pieces":13,"piecesAll":13},{"code":"25.J01-01","bucket":"B1","ch":"25","catRows":3,"testRows":0,"views":[],"mat":["1 Strøk støvbindene maling på betong — 1 m2"],"kr":[],"res":["UE Maler-1 Strøk støvbindende behandling på ubehandlet betonghimling innvendig — 1 m2"],"siblings":3,"sibEx":["25.J01-01","25.J01-02","25.J01-03"],"sibViews":[],"v2bucket":"A","v2where":"main","v2emoji":"🤖","v2rows":1,"v2mapped":0,"v2ex":["1 Strøk støvbindene maling på betong — 1 m2  ⚠needs EPD"],"v2cdesc":"1 STRØK STØVBINDENDE MALING.BEHANDLING PÅ UBEHANDLET BETONGHIMLING INNVENDIG. BEHANDLING: Lokalisering: Materialer: Fargenummer: Glanstall: Andre krav: Areal m²","v2disp":"B1","pieces":4,"piecesAll":4},{"code":"25.J01-91","bucket":"C","ch":"25","catRows":0,"testRows":0,"views":[],"mat":[],"kr":[],"res":[],"siblings":3,"sibEx":["25.J01-01","25.J01-02","25.J01-03"],"sibViews":[],"v2bucket":"C","v2where":"9x","v2emoji":"⚠️","v2rows":1,"v2mapped":0,"v2ex":["1 Strøk støvbindene maling på betong — 1 m2  ⚠needs EPD"],"v2cdesc":"1 STRØK STØVBINDENDE MALING.BEHANDLING PÅ UBEHANDLET BETONGHIMLING INNVENDIG. BEHANDLING: Lokalisering: Materialer: Fargenummer: Glanstall: Andre krav: Areal m²","v2disp":"C","pieces":71,"piecesAll":71},{"code":"25.M00-91","bucket":"D","ch":"25","catRows":0,"testRows":0,"views":[],"mat":[],"kr":[],"res":[],"siblings":0,"sibEx":[],"sibViews":[],"v2bucket":"D","v2where":"","v2emoji":"","v2rows":0,"v2mapped":0,"v2ex":[],"v2cdesc":"","v2disp":"D","pieces":3,"piecesAll":3},{"code":"26.A01-91","bucket":"C","ch":"26","catRows":0,"testRows":0,"views":[],"mat":[],"kr":[],"res":[],"siblings":2,"sibEx":["26.A01","26.A01-01"],"sibViews":["26-T"],"v2bucket":"C","v2where":"9x","v2emoji":"⚠️","v2rows":2,"v2mapped":2,"v2ex":["Dampsperresjikt av plast. — 1 m2","Korrugert stålplatetak, H = 100 mm — 11 kg"],"v2cdesc":"Korrugert stålplatetak, H = 100 mm","v2disp":"C","pieces":7,"piecesAll":7},{"code":"26.C01-02","bucket":"B1","ch":"26","catRows":78,"testRows":0,"views":[],"mat":["Slakarmert plattendekke. (legg inn 60mm DO kjeller) — 0.7 m2","Forspent plattendekke. (legg inn 80mm DO kjeller) — 0.3 m2"],"kr":["Timelønn Betongarbeider — 0 timer","Timelønn Betongarbeider — 0 timer","Reis PD/BD: Stålstøtter  pute  inntil 3 7m — 12 dag"],"res":["Plattendekke 50mm.Slakkarmert.(SA/XC1) Inkl.Gitterdragere inntil 2,1kg/m2 og armering 7,5 kg/m2.Ink.Lavkarbon kl.A — 0.7 m2","Plattendekker transport - Regnet 180m2/lass — 0.7 m2"],"siblings":5,"sibEx":["26.C01-01","26.C01-02","26.C01-03","26.C01-04","26.C01-05"],"sibViews":[],"v2bucket":"A","v2where":"main","v2emoji":"🤖","v2rows":11,"v2mapped":10,"v2ex":["Slakarmert plattendekke. (legg inn 60mm DO kje — 0.7 m2","Slakarmert plattendekke. (legg inn 60mm DO kje — 0.7 m2","Slakarmert plattendekke. (legg inn 60mm DO kje — 1.4 m2","Forspent plattendekke. (legg inn 80mm DO kjell — 0.3 m2"],"v2cdesc":"Plattendekke + påstøp = 260mm.","v2disp":"B1","pieces":6,"piecesAll":6},{"code":"26.F01-02","bucket":"B1","ch":"26","catRows":9,"testRows":0,"views":[],"mat":["Massiv 160mm. — 1 m2","Gipsplater Brannplate, t = 1 x 15 mm — 1 m2"],"kr":["Timelønn Tømrer — 0 timer"],"res":["Massivtre levert og montert.pr.m3 — 0.16 m3","GIPSPL GFE15 F 15,4X900X2500 KLIMA BRANNGIPS PROTECT — 1.15 m2"],"siblings":3,"sibEx":["26.F01-01","26.F01-02","26.F01-03"],"sibViews":[],"v2bucket":"A","v2where":"main","v2emoji":"🤖","v2rows":2,"v2mapped":2,"v2ex":["Massiv 160mm. — 0.0256 m3","Gipsplater Brannplate, t = 1 x 15 mm — 1 m2"],"v2cdesc":"Massivtre, t = 160- Inkl.Branngips under","v2disp":"B1","pieces":3,"piecesAll":3},{"code":"26.G02-91","bucket":"D","ch":"26","catRows":0,"testRows":0,"views":[],"mat":[],"kr":[],"res":[],"siblings":0,"sibEx":[],"sibViews":[],"v2bucket":"D","v2where":"","v2emoji":"","v2rows":0,"v2mapped":0,"v2ex":[],"v2cdesc":"","v2disp":"D","pieces":6,"piecesAll":6},{"code":"26.G03-91","bucket":"D","ch":"26","catRows":0,"testRows":0,"views":[],"mat":[],"kr":[],"res":[],"siblings":0,"sibEx":[],"sibViews":[],"v2bucket":"D","v2where":"","v2emoji":"","v2rows":0,"v2mapped":0,"v2ex":[],"v2cdesc":"","v2disp":"D","pieces":1,"piecesAll":1},{"code":"26.H01-02","bucket":"A","ch":"26","catRows":64,"testRows":7,"views":["265"],"mat":["Finer - Innvendig side mot tak. — 1 m2","Vindsperresjikt på vegg. Gipsplate GU9 R — 1 m2"],"kr":["Timelønn Tømrer — 0 timer","Timelønn Tømrer — 0 timer","Timelønn Tømrer — 0 timer"],"res":["OSBPL 3 TG2 12X2397X1198 — 1.1 m2","FESTEMATR TØMRER som skuddd ,bolter etc — 0.2 pak"],"siblings":3,"sibEx":["26.H01-01","26.H01-02","26.H01-03"],"sibViews":["265"],"v2bucket":"A","v2where":"main","v2emoji":"🤖","v2rows":12,"v2mapped":12,"v2ex":["Finer - Innvendig side mot tak. — 0.0198 m3","Finer - Innvendig side mot tak. — 0.00396 m3","Vindsperresjikt på vegg. Gipsplate GU9 R — 1.15 m2","Vindsperresjikt på vegg. Gipsplate GU9 R — 0.555555 m"],"v2cdesc":"Gesims, 150 mm trestenderverk","v2disp":"A","pieces":23,"piecesAll":23},{"code":"26.H01-91","bucket":"C","ch":"26","catRows":0,"testRows":0,"views":[],"mat":[],"kr":[],"res":[],"siblings":3,"sibEx":["26.H01-01","26.H01-02","26.H01-03"],"sibViews":["265"],"v2bucket":"C","v2where":"9x","v2emoji":"⚠️","v2rows":12,"v2mapped":12,"v2ex":["Finer - Innvendig side mot tak. — 0.0198 m3","Finer - Innvendig side mot tak. — 0.00396 m3","Vindsperresjikt på vegg. Gipsplate GU9 R — 1.15 m2","Vindsperresjikt på vegg. Gipsplate GU9 R — 0.555555 m"],"v2cdesc":"Gesims, 100 mm trestenderverk","v2disp":"C","pieces":21,"piecesAll":21},{"code":"26.J04-03","bucket":"A","ch":"26","catRows":58,"testRows":4,"views":["265"],"mat":["Utlekting for kledning, utvendig. — 1 m2","Sløyfer og lekter for utvendig kledning. — 1 m2"],"kr":["Timelønn Tømrer — 0 timer","Timelønn Tømrer — 0 timer","Timelønn Tømrer — 1 timer"],"res":["G-F 36X048 LEKT/REKKE KL1 — 4.4 m","FESTEMATR TØMRER som skuddd ,bolter etc — 0.165 pak"],"siblings":4,"sibEx":["26.J04-01","26.J04-02","26.J04-03","26.J04-04"],"sibViews":["265"],"v2bucket":"A","v2where":"main","v2emoji":"🤖","v2rows":8,"v2mapped":7,"v2ex":["Utlekting for kledning, utvendig. — 0.007603 m3","Utlekting for kledning, utvendig. — 0.000394 m3","Sløyfer og lekter for utvendig kledning. — 0.00425 m3","Sløyfer og lekter for utvendig kledning. — 8.5e-05 m3"],"v2cdesc":"Værhud av treverk, t xxx mm Liggende trekledning med enkel fals","v2disp":"A","pieces":41,"piecesAll":41},{"code":"26.M01-03","bucket":"A","ch":"26","catRows":35,"testRows":3,"views":["262-T"],"mat":["Dampsperre m/tapede skjøter — 0.8 m2","Byggetidstekking/dampsperre av asfaltbelegg — 0.2 m2"],"kr":[],"res":["Dampsperre av plast m / tapede skjøter-utbrettet flate — 0.8 m2","Opp / Nedbrett-Dampsperre plast m / tapede skjøter — 0.64 m"],"siblings":5,"sibEx":["26.M01-01","26.M01-02","26.M01-03","26.M01-04","26.M01-05"],"sibViews":["262-T"],"v2bucket":"A","v2where":"main","v2emoji":"🤖","v2rows":13,"v2mapped":4,"v2ex":["Dampsperre m/tapede skjøter — 0.8 m2  ⚠needs EPD","Dampsperre m/tapede skjøter — 0.64 m  ⚠needs EPD","Byggetidstekking/dampsperre av asfaltbelegg — 0.2 m2","Byggetidstekking/dampsperre av asfaltbelegg — 0.1 m2"],"v2cdesc":"1 lag tekking med tildekket brennbar fallisolasjon","v2disp":"A","pieces":12,"piecesAll":12},{"code":"26.M02-01","bucket":"A","ch":"26","catRows":13,"testRows":4,"views":["262-T"],"mat":["Tilfarere/bjelker som underlag for terrassebord — 1 m2","Terrassegulv av cu-imp terrassebord — 1 m2"],"kr":["Timelønn Tømrer — 1 timer","Timelønn Tømrer — 1 timer"],"res":["FURU 28X120 CUIMP TERRASSE KL1 — 0.935 m","FURU 48X098 CUIMP K-VIRKE C24 — 1.98 m"],"siblings":7,"sibEx":["26.M02-01","26.M02-02","26.M02-03","26.M02-04","26.M02-05"],"sibViews":["262-T"],"v2bucket":"A","v2where":"main","v2emoji":"🤖","v2rows":6,"v2mapped":6,"v2ex":["Tilfarere/bjelker som underlag for terrassebor — 0.003142 m3","Tilfarere/bjelker som underlag for terrassebor — 0.009314 m3","Tilfarere/bjelker som underlag for terrassebor — 0.00207 m3","Tilfarere/bjelker som underlag for terrassebor — 0.003622 m3"],"v2cdesc":"Takterrasse med cu-imp terrassebord","v2disp":"A","pieces":7,"piecesAll":7},{"code":"26.M02-05","bucket":"B2","ch":"26","catRows":3,"testRows":0,"views":["262-T"],"mat":["Betongheller avrettet på klosser — 1 m2"],"kr":["UE Tekking div uten CO2 — 1 250 kr"],"res":[],"siblings":7,"sibEx":["26.M02-01","26.M02-02","26.M02-03","26.M02-04","26.M02-05"],"sibViews":["262-T"],"v2bucket":"A","v2where":"main","v2emoji":"💵","v2rows":1,"v2mapped":0,"v2ex":["Betongheller avrettet på klosser — 1 m2  ⚠needs EPD"],"v2cdesc":"Betongheller avrettet på klosser","v2disp":"B1","pieces":1,"piecesAll":1},{"code":"26.M02-07","bucket":"B2","ch":"26","catRows":24,"testRows":0,"views":["262-T"],"mat":["Tetthetskontroll — 1 m2","Beskyttelses duk på membran — 1 m2"],"kr":["UE Tekking Sedum — 45 kr","UE Tekking Sedum — 90 kr","UE Tekking Sedum — 15 kr"],"res":[],"siblings":7,"sibEx":["26.M02-01","26.M02-02","26.M02-03","26.M02-04","26.M02-05"],"sibViews":["262-T"],"v2bucket":"A","v2where":"main","v2emoji":"💵","v2rows":6,"v2mapped":0,"v2ex":["Tetthetskontroll — 1 m2  ⚠needs EPD","Beskyttelses duk på membran — 1 m2  ⚠needs EPD","Drensmatte — 1 m2  ⚠needs EPD","Filter fleece duk — 1 m2  ⚠needs EPD"],"v2cdesc":"Sedum flate tak (eks isolering og tekking)","v2disp":"B1","pieces":5,"piecesAll":5},{"code":"26.P03-01","bucket":"B2","ch":"26","catRows":16,"testRows":0,"views":["262-T"],"mat":["Levering og montering av strukturmatte — 1030 m2","Tradisjonell dobbeltfalset båndtekking - skjultinnfesting Båndtekking leveres i lakkert stål - PLX falsekvalitet - med cc600mm — 1030 m2"],"kr":["Blikkenslager — 88 992 kr","Blikkenslager — 1 446 120 kr","Blikkenslager — 49 518 kr"],"res":[],"siblings":1,"sibEx":["26.P03-01"],"sibViews":["262-T"],"v2bucket":"A","v2where":"main","v2emoji":"💵","v2rows":5,"v2mapped":0,"v2ex":["Levering og montering av strukturmatte — 1030 m2  ⚠needs EPD","Tradisjonell dobbeltfalset båndtekking - skjul — 1030 m2  ⚠needs EPD","Produksjon og montering av sprangblikk — 131 m  ⚠needs EPD","Produksjon og montering av perforert beslag un — 131 m  ⚠needs EPD"],"v2cdesc":"Båndtekking -Båndtekking leveres i lakkert stål - PLX falsekvalitet - med cc600mm","v2disp":"B1","pieces":1,"piecesAll":1},{"code":"28.B03-01","bucket":"B2","ch":"28","catRows":3,"testRows":0,"views":["281"],"mat":["Komplett ståltrapp 180° med to rettløp og repos. Trinn av stålrist. Korosjonsbehandlet og ferdig mal for utvendig brukt, Med rekkkkverk og håndlist på begge sider. — 1 stk"],"kr":["UE METALLARBEIDER — 103 500 kr"],"res":[],"siblings":3,"sibEx":["28.B03-01","28.B03-02","28.B03-03"],"sibViews":["281"],"v2bucket":"B2","v2where":"","v2emoji":"","v2rows":0,"v2mapped":0,"v2ex":[],"v2cdesc":"","v2disp":"B2","pieces":7,"piecesAll":7},{"code":"28.D02-02","bucket":"B1","ch":"28","catRows":3,"testRows":0,"views":["284"],"mat":["Glassrekkverk.1,2m innsp glass og skjult dekkeforkant17,52mm herdet klart laminert — 1 m"],"kr":[],"res":["UE Glass/Alu Terrasse rekkverk 1,2m. innsp.glass. — 1 m"],"siblings":7,"sibEx":["28.D02-01","28.D02-02","28.D02-03","28.D02-04","28.D02-10"],"sibViews":["284"],"v2bucket":"A","v2where":"main","v2emoji":"🤖","v2rows":1,"v2mapped":0,"v2ex":["Glassrekkverk.1,2m innsp glass og skjult dekke — 1 m  ⚠needs EPD"],"v2cdesc":"Rekkverk terrasse-Glassrekkverk.1,2m innsp glass og skjult dekkeforkant17,52mm herdet klart laminert","v2disp":"B1","pieces":7,"piecesAll":7}]</script>
+<script>
+(function(){
+  "use strict";
+  var DATA = JSON.parse(document.getElementById("payload").textContent);
+  var reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* bucket colour by key (shared across versions) */
+  function col(k){ return "var(--b-" + k + ")"; }
+
+  var CFG = {
+    v1: {
+      field: "bucket",
+      compare: "checked 10.08.2026 · vs 06_Test",
+      note: "The first test — 25 of 91 built.",
+      h1: '48 of 91 codes exist. <em>25</em> are already built.',
+      standfirst: "Every <code>Parameter-name</code> in the model export, matched against the first test build (06_Test) and the full 39&nbsp;952-row Veidekke catalogue. The gap is five problems with five owners.",
+      buckets: [
+        {k:"A",  label:"In 06_Test build"},
+        {k:"B1", label:"Catalogue · has material"},
+        {k:"B2", label:"Catalogue · price only"},
+        {k:"B3", label:"Catalogue · no rows"},
+        {k:"C",  label:"-9x issue"},
+        {k:"D",  label:"Absent entirely"}
+      ],
+      milestones: ["A"],
+      stats: [
+        {n:"48", tot:"/ 91", l:"Match All Library", d:"The element id exists somewhere in Veidekke's catalogue."},
+        {n:"25", tot:"/ 91", l:"Match 06_Test", d:"Already carried into the first test with an EPD and a quantity."},
+        {n:"10", l:"No quantity to map", d:"Matched, but priced only in kroner — nothing to attach an EPD to."},
+        {n:"43", l:"No match at all", d:"25 are the -9x numbering band, 18 never existed."}
+      ],
+      indexLede: "All 91, coloured by first-test outcome. Filter to a bucket, then click a code for what sits underneath it.",
+      priceH2: ["The ten with nothing to weigh", "B2 + B3"],
+      priceLede: "These look like they carry a quantity — the underpost line reads <code>1&nbsp;m²</code> — but every resource beneath it is a lump sum in kroner. The pattern is exact: <strong>every subcontracted trade</strong> is booked as money, not material.",
+      chSub: "first-test coverage",
+      chLede: "Chapter 24 is the sink: <strong>27 codes in, only 8 built</strong>. Chapters 21, 22, 26 and 28 convert almost cleanly.",
+      noteSub: "five problems, five owners",
+      noteHTML:
+        '<p><strong>A — 25 codes, done.</strong> In the 06_Test build with an EPD and a quantity.</p>'+
+        '<p><strong>B1 — 13 codes, Veidekke’s call.</strong> Real materials that never made the first build, <strong>12 of 13 hidden in every export</strong>. The exception <code>28.D02-02</code> is visible in 284 and is the 1&nbsp;m glassrekkverk our own <code>restype=UE</code> rule wrongly drops — <strong>our bug</strong>.</p>'+
+        '<p><strong>B2 + B3 — 10 codes, ask Veidekke.</strong> Priced in kroner only.</p>'+
+        '<p><strong>C — 25 codes, model-side only.</strong> The <code>-91</code>/<code>-92</code> band is a model numbering convention; Veidekke uses <strong>0 of her 1&nbsp;061 ids</strong> in 90–99.</p>'+
+        '<p><strong>D — 18 codes, never existed.</strong> Zero rows carry the prefix. Ten are chapter 24.</p>'
+    },
+    v2: {
+      field: "v2disp",
+      compare: "rebuilt 10.08.2026 · vs 07_Test_v.2 (both files)",
+      note: "The second test — 69 of 91 now resolved.",
+      h1: '69 of 91 now resolved. Only <em>18</em> never existed.',
+      standfirst: "The same 91 codes against the second test — <code>Reduzer_master_NEW.xlsx</code> and its <code>-9x</code> mirror. Interpreting the excluded and cost-only lines, and mirroring the <code>-9x</code> band, closes the gap from 25 to 69. Green is what the first test already built; blue is what this test added on top.",
+      buckets: [
+        {k:"A",  label:"Built — already in v1"},
+        {k:"B1", label:"Built — new in v2"},
+        {k:"C",  label:"Mirrored in 9X file"},
+        {k:"CD", label:"No base to mirror"},
+        {k:"B2", label:"Excluded — kr only"},
+        {k:"D",  label:"Never existed"}
+      ],
+      milestones: ["A", "B1", "C"],
+      stats: [
+        {n:"47", tot:"/ 91", l:"Built as components", d:"25 were already built in v1 (green); 22 added on top in v2 (blue). ✅ reviewed, 🤖 interpreted, 💵 cost-line converted."},
+        {n:"22", tot:"/ 91", l:"Mirrored in 9X file", d:"The -9x codes now have a -91…-99 copy of their base instance."},
+        {n:"69", tot:"/ 91", up:"▲ 25", l:"Now resolved", d:"Built or mirrored — up from 25 in the first test."},
+        {n:"22", tot:"/ 91", l:"Still open", d:"3 have no base instance to mirror, 1 excluded (steel stair), 18 whose group never existed."}
+      ],
+      indexLede: "The same 91, recoloured by second-test outcome. Green = already built in v1, blue = built new in v2, purple = mirrored in the 9X file, red = the group never existed.",
+      priceH2: ["The ten cost-only lines, revisited", "9 now built"],
+      priceLede: "In the second test the quantity is taken from the component line, so <strong>nine of the ten are now built</strong> as 💵 components (an EPD may still be needed). Only <code>28.B03-01</code> — a complete steel stair at <code>1&nbsp;stk</code> — stays out, because there is no material quantity to convert.",
+      chSub: "second-test coverage",
+      chLede: "Every chapter moves up. Chapter 25 goes from 2 built to 21 resolved, chapter 24 from 8 to 16 (mostly via the 9X mirror). What remains is the genuinely absent chapter-24 families.",
+      noteSub: "where each bucket went",
+      noteHTML:
+        '<p><strong>A — 25 built, already in v1.</strong> Carried over from the first test unchanged (green). These are the milestone baseline.</p>'+
+        '<p><strong>B1 — 22 built, new in v2 (blue).</strong> Added on top: 13 catalogue-material codes now interpreted (🤖), 8 cost-only lines converted from their component quantity (💵) and 1 that had no resource rows. This is the progress this test bought.</p>'+
+        '<p><strong>C — 22 mirrored.</strong> Each <code>-9x</code> code now has a <code>-91…-99</code> copy of its base instance in <code>Reduzer_master_NEW_9X.xlsx</code>. A model object pointing at <code>-91</code> resolves against it.</p>'+
+        '<p><strong>C/D — 3 with no base to mirror.</strong> <code>24.L03-92</code>, <code>25.I03-91</code>, <code>25.I03-92</code>. The group exists, but the exact base the mirror rule targets (<code>-01</code>/<code>-02</code>) was never created — that group’s numbering starts at <code>-03</code>. So there is nothing to copy. Not truly absent, but not mirrorable either.</p>'+
+        '<p><strong>B2 — 1 excluded.</strong> <code>28.B03-01</code>, a complete steel stair priced only in kroner at 1&nbsp;stk. No mass to assign without inventing one.</p>'+
+        '<p><strong>D — 18 never existed.</strong> The group carries zero rows in the catalogue, so nothing — not even a mirror — can be built. Ten are the chapter-24 <code>24.G0x</code> / <code>24.M0x</code> families.</p>'
+    }
+  };
+
+  /* the 10 cost-only rows (static copy + per-code v2 outcome pulled from DATA) */
+  var PRICE = [
+    {code:"26.P03-01", mat:"Tradisjonell dobbeltfalset båndtekking — 1030 m²", as:"Blikkenslager", kr:"1 446 120 kr", view:"262-T"},
+    {code:"28.B03-01", mat:"Komplett ståltrapp 180°, to rettløp og repos", as:"UE METALLARBEIDER", kr:"103 500 kr", view:"281"},
+    {code:"26.M02-05", mat:"Betongheller avrettet på klosser", as:"UE Tekking div uten CO₂", kr:"1 250 kr", view:"262-T"},
+    {code:"26.M02-07", mat:"Beskyttelses duk på membran", as:"UE Tekking Sedum", kr:"45 / 90 / 15 kr", view:"262-T"},
+    {code:"24.L02-02", mat:"Tekstiltapeter VESCOM Ecolin", as:"Byggtapetserer", kr:"1 150 kr", view:"hidden"},
+    {code:"24.L02-01", mat:"Veggvinyl bak toaletter / hele vegger", as:"Byggtapetserer", kr:"595 kr", view:"hidden"},
+    {code:"25.I03-03", mat:"Forbo Sphera Energetic, 100 mm oppbrett", as:"Byggtapetserer", kr:"490 kr", view:"hidden"},
+    {code:"25.I03-04", mat:"Tarkett Optima 2-3 dB, ikke oppbrett", as:"Byggtapetserer", kr:"398 kr", view:"hidden"},
+    {code:"23.L02-01", mat:"Veggvinyl", as:"Byggtapetserer", kr:"400 kr", view:"hidden"},
+    {code:"24.L04-01", mat:"Flis på innervegg UE", as:"no resource rows at all", kr:"—", view:"hidden"}
+  ];
+
+  var VERSION = "v1", METRIC = "code", active = "all", selected = null;
+  var byCode = {}; DATA.forEach(function(d){ byCode[d.code] = d; });
+  function cfg(){ return CFG[VERSION]; }
+  function bkey(d){ return d[cfg().field]; }
+  function bmeta(k){ return cfg().buckets.filter(function(b){return b.k===k;})[0]; }
+  // weight of one code under the active metric: 1 per code, or its model-piece count
+  function W(d){ return METRIC === "pieces" ? (d.pieces || 0) : 1; }
+  function grandTotal(){ return DATA.reduce(function(a,d){ return a + W(d); }, 0); }
+  function count(k){ return DATA.reduce(function(a,d){ return a + (bkey(d)===k ? W(d) : 0); }, 0); }
+  function metricNoun(){ return METRIC === "pieces" ? "pieces" : "codes"; }
+
+  var el = function(id){ return document.getElementById(id); };
+  function set(id, html){ el(id).innerHTML = html; }
+  function clear(n){ while(n.firstChild) n.removeChild(n.firstChild); }
+
+  /* ---------------- render everything ---------------- */
+  function renderChrome(){
+    var c = cfg();
+    set("h1", c.h1);
+    set("standfirst", c.standfirst);
+    set("ebCompare", c.compare);
+    el("switchNote").innerHTML = c.note + " · counting <b>"
+      + (METRIC === "pieces" ? "model pieces" : "unique codes") + "</b>";
+    set("indexLede", c.indexLede);
+    set("priceH2", c.priceH2[0] + ' <span>' + c.priceH2[1] + '</span>');
+    set("priceLede", c.priceLede);
+    set("chSub", c.chSub);
+    set("chLede", c.chLede);
+    set("noteSub", c.noteSub);
+    set("note", c.noteHTML);
+    var f = ["source · data/library.csv — 39 952 rows"];
+    f = VERSION==="v1"
+      ? ["build · 06_Test/Reduzer_import_ALL_TEST.xlsx", "report · 04_reports/code_buckets_Mule-Krister.csv", "rerun · scripts/check_codes.py"]
+      : ["build · 07_Test_v.2/Reduzer_master_NEW.xlsx (+ _9X)", "report · 07_Test_v.2/build_report.md", "rerun · scripts/build_test2.py"];
+    el("foot").innerHTML = "<span>source · data/library.csv</span>" + f.map(function(x){return "<span>"+x+"</span>";}).join("");
+  }
+
+  function renderDist(){
+    var bar = el("distBar"), key = el("distKey"), flags = el("distFlags");
+    clear(bar); clear(key); clear(flags);
+    var total = grandTotal();
+    var miles = cfg().milestones || [];
+    cfg().buckets.forEach(function(b){
+      var n = count(b.k), pct = Math.round(100 * n / total);
+      // milestone flag row (aligned over its segment by matching flex)
+      var fl = document.createElement("div");
+      fl.className = "dist-flag" + (miles.indexOf(b.k) < 0 || !n ? " blank" : "");
+      fl.style.flex = n + " 1 0";
+      if (miles.indexOf(b.k) >= 0 && n){
+        var p = document.createElement("span"); p.className = "pct";
+        p.style.color = col(b.k); p.textContent = pct + "%";
+        var t = document.createElement("span"); t.className = "tick"; t.style.background = col(b.k);
+        fl.appendChild(p); fl.appendChild(t);
+      }
+      flags.appendChild(fl);
+      // bar segment
+      var seg = document.createElement("div");
+      seg.className = "dist-seg"; seg.style.flex = n + " 1 0";
+      seg.style.background = col(b.k); seg.title = b.label + " — " + n + " (" + pct + "%)";
+      if (n > 3) seg.textContent = n;
+      bar.appendChild(seg);
+      if (!n) return;
+      var s = document.createElement("span");
+      var d = document.createElement("i"); d.className = "dot"; d.style.background = col(b.k);
+      s.appendChild(d);
+      var lab = b.k + " · " + b.label + " · " + n;
+      if (miles.indexOf(b.k) >= 0) lab += " · " + pct + "%";
+      s.appendChild(document.createTextNode(lab));
+      key.appendChild(s);
+    });
+    // total milestone: cumulative % across the milestone buckets
+    var reached = miles.reduce(function(a,k){ return a + count(k); }, 0);
+    if (reached){
+      var s = document.createElement("span");
+      s.style.fontWeight = "700"; s.style.color = "var(--accent)";
+      s.textContent = "◆ milestone " + (Math.round(1000 * reached / total)/10).toFixed(1)
+        + "% (" + reached.toLocaleString() + " / " + total.toLocaleString() + " " + metricNoun() + ")";
+      key.appendChild(s);
+    }
+  }
+
+  function renderStats(){
+    var box = el("stats"); clear(box);
+    cfg().stats.forEach(function(s){
+      var d = document.createElement("div"); d.className = "stat";
+      var n = document.createElement("span"); n.className = "n";
+      n.appendChild(document.createTextNode(s.n));
+      if (s.tot){ var t=document.createElement("small"); t.textContent=s.tot; n.appendChild(t); }
+      if (s.up){ var u=document.createElement("span"); u.className="up"; u.textContent=s.up; n.appendChild(u); }
+      var l = document.createElement("span"); l.className="l"; l.textContent=s.l;
+      var dd = document.createElement("span"); dd.className="d"; dd.textContent=s.d;
+      d.appendChild(n); d.appendChild(l); d.appendChild(dd); box.appendChild(d);
+    });
+  }
+
+  function renderFulfill(){
+    var box = el("fulfill"); clear(box);
+    var totCode = DATA.length;
+    var totPieces = DATA.reduce(function(a,d){ return a + (d.pieces||0); }, 0);
+    // resolved-bucket sets per version, in draw order
+    var VERS = [
+      {v:"v1", label:"Test v1", res:["A"],        key:function(d){return d.bucket;}},
+      {v:"v2", label:"Test v2", res:["A","B1","C"], key:function(d){return d.v2disp;}}
+    ];
+    var METRICS = [
+      {id:"code",   name:"By unique code",  unit:"codes",  total:totCode,   w:function(d){return 1;}},
+      {id:"pieces", name:"By model pieces", unit:"instances", total:totPieces, w:function(d){return d.pieces||0;}}
+    ];
+    METRICS.forEach(function(mt){
+      var activeMetric = (mt.id === METRIC);
+      var g = document.createElement("div"); g.className = "fgroup" + (activeMetric ? "" : " dim");
+      var h = document.createElement("h3");
+      h.innerHTML = mt.name + " <small>" + mt.total.toLocaleString() + " " + mt.unit
+        + (activeMetric ? " · <span class=\"cur\">active</span>" : "") + "</small>";
+      g.appendChild(h);
+      VERS.forEach(function(ver){
+        var activeVer = (ver.v === VERSION);
+        var resolved = 0, segs = [];
+        ver.res.forEach(function(k){
+          var w = DATA.reduce(function(a,d){ return a + (ver.key(d)===k ? mt.w(d) : 0); }, 0);
+          if (w) segs.push({k:k, w:w});
+          resolved += w;
+        });
+        var pct = 100 * resolved / mt.total;
+        var pctTxt = (Math.round(pct*10)/10).toFixed(1);
+        var row = document.createElement("div");
+        row.className = "frow" + (activeVer ? " on" : (activeMetric ? " dim" : ""));
+        var v = document.createElement("span"); v.className = "fver"; v.textContent = ver.v.toUpperCase();
+        var track = document.createElement("div"); track.className = "ftrack";
+        segs.forEach(function(s){
+          var i = document.createElement("i");
+          i.style.width = (100*s.w/mt.total) + "%"; i.style.background = col(s.k);
+          i.title = s.k + " — " + s.w.toLocaleString();
+          track.appendChild(i);
+        });
+        var p = document.createElement("span"); p.className = "fpct";
+        p.innerHTML = pctTxt + "%<small>" + resolved.toLocaleString() + " / " + mt.total.toLocaleString() + "</small>";
+        row.appendChild(v); row.appendChild(track); row.appendChild(p);
+        g.appendChild(row);
+      });
+      box.appendChild(g);
+    });
+    // shared legend
+    var leg = document.createElement("div"); leg.className = "flegend";
+    [["A","built (v1 baseline)"],["B1","built new in v2"],["C","mirrored in 9X"]].forEach(function(p){
+      var s = document.createElement("span");
+      var d = document.createElement("i"); d.className = "dot"; d.style.background = col(p[0]);
+      s.appendChild(d); s.appendChild(document.createTextNode(p[1]));
+      leg.appendChild(s);
+    });
+    var s = document.createElement("span"); s.style.color = "var(--ink-3)";
+    var d = document.createElement("i"); d.className = "dot"; d.style.background = "var(--surface-3)"; d.style.border = "1px solid var(--line)";
+    s.appendChild(d); s.appendChild(document.createTextNode("unresolved (absent / no-base / excluded)"));
+    leg.appendChild(s);
+    box.appendChild(leg);
+  }
+
+  function renderFilters(){
+    var box = el("filters"); clear(box); active = "all";
+    function mk(k, label, n){
+      var b = document.createElement("button");
+      b.className="filt"; b.type="button"; b.dataset.k=k;
+      b.setAttribute("aria-pressed", k===active?"true":"false");
+      if (k!=="all"){ var d=document.createElement("i"); d.className="dot"; d.style.background=col(k); b.appendChild(d); }
+      b.appendChild(document.createTextNode(label+" "));
+      var s=document.createElement("b"); s.textContent=n; b.appendChild(s);
+      b.addEventListener("click", function(){
+        active=k;
+        Array.prototype.forEach.call(box.children,function(e){ e.setAttribute("aria-pressed", e.dataset.k===k?"true":"false"); });
+        applyFilter();
+      });
+      return b;
+    }
+    box.appendChild(mk("all","All",grandTotal()));
+    cfg().buckets.forEach(function(b){ if(count(b.k)) box.appendChild(mk(b.k,b.k,count(b.k))); });
+  }
+
+  function renderChips(){
+    var grid = el("grid"); clear(grid);
+    DATA.forEach(function(d){
+      var b = document.createElement("button");
+      b.className="chip"; b.type="button"; b.dataset.code=d.code;
+      b.style.setProperty("--bc", col(bkey(d)));
+      b.setAttribute("aria-pressed", d.code===selected?"true":"false");
+      var t=document.createElement("span"); t.textContent=d.code; b.appendChild(t);
+      var s=document.createElement("span"); s.className="cb"; s.textContent=sub(d); b.appendChild(s);
+      b.addEventListener("click", function(){ show(d.code); });
+      grid.appendChild(b);
+    });
+    applyFilter();
+  }
+  function sub(d){
+    if (VERSION==="v1") return d.bucket + (d.views.length ? " · "+d.views.join(" ") : " · hidden");
+    if (d.v2disp==="A")  return (d.v2emoji||"") + " built · was in v1";
+    if (d.v2disp==="B1") return (d.v2emoji||"") + " built · new in v2";
+    if (d.v2bucket==="C") return "⚠️ mirrored -9x";
+    if (d.v2bucket==="CD") return "no base to mirror";
+    if (d.v2bucket==="B2") return "excluded · kr only";
+    return "never existed";
+  }
+  function applyFilter(){
+    Array.prototype.forEach.call(el("grid").children, function(e){
+      var d = byCode[e.dataset.code];
+      e.classList.toggle("hidden", active!=="all" && bkey(d)!==active);
+    });
+  }
+
+  function row(dl, term, node){
+    var dt=document.createElement("dt"); dt.textContent=term;
+    var dd=document.createElement("dd");
+    if (typeof node==="string") dd.textContent=node; else dd.appendChild(node);
+    dl.appendChild(dt); dl.appendChild(dd);
+  }
+  function lines(arr, cls){
+    var f=document.createDocumentFragment();
+    arr.forEach(function(t){ var s=document.createElement("span"); s.className="line"+(cls?" "+cls:""); s.textContent=t; f.appendChild(s); });
+    return f;
+  }
+
+  function show(code){
+    selected = code;
+    Array.prototype.forEach.call(el("grid").children, function(e){ e.setAttribute("aria-pressed", e.dataset.code===code?"true":"false"); });
+    var d = byCode[code], detail = el("detail"); clear(detail);
+    var k = bkey(d), meta = bmeta(k);
+    var h=document.createElement("div"); h.className="dh";
+    var c=document.createElement("span"); c.className="dc mono"; c.textContent=code;
+    var bg=document.createElement("span"); bg.className="db"; bg.style.background=col(k);
+    bg.textContent = k + " — " + (meta?meta.label:"");
+    h.appendChild(c); h.appendChild(bg); detail.appendChild(h);
+    var dl=document.createElement("dl");
+    row(dl,"Chapter", d.ch);
+    if (VERSION==="v1") showV1(dl,d,k); else showV2(dl,d,k);
+    detail.appendChild(dl);
+  }
+  function showV1(dl,d,k){
+    if (k==="C"){
+      row(dl,"Status","Group exists, this instance never did. Veidekke uses no id in the 90–99 band.");
+      row(dl,"Real instances", d.siblings ? d.siblings+" — "+d.sibEx.join(", ")+(d.siblings>5?" …":"") : "—");
+      row(dl,"Group visible in", d.sibViews.length ? d.sibViews.join(", ") : "hidden in every export");
+    } else if (k==="D"){
+      row(dl,"Status","Zero rows out of 39 952 carry this element-group prefix. Never created.");
+    } else {
+      row(dl,"Catalogue rows", String(d.catRows));
+      row(dl,"Visible in", d.views.length ? d.views.join(", ") : "hidden in every export");
+      if (d.mat.length) row(dl,"Material line", lines(d.mat));
+      if (d.res.length) row(dl,"Resource", lines(d.res));
+      if (d.kr.length)  row(dl,"Priced as", lines(d.kr,"kr"));
+      if (k==="A") row(dl,"In build", d.testRows + " rows in 06_Test, with an EPD");
+      if (k==="B2") row(dl,"Problem","Only kroner beneath it — nothing to attach an EPD to.");
+      if (k==="B3") row(dl,"Problem","Underpost line only. No resource rows at all.");
+    }
+  }
+  function showV2(dl,d,k){
+    if (k==="A" || k==="B1"){
+      row(dl,"Outcome", (d.v2emoji?d.v2emoji+"  ":"") + "Built in Reduzer_master_NEW.xlsx");
+      row(dl,"Added", k==="A" ? "Already built in Test v1 (baseline)" : "New in Test v2 — added on top of v1");
+      row(dl,"Component", d.v2cdesc || d.code);
+      row(dl,"Rows", d.v2rows + " product row" + (d.v2rows===1?"":"s") + " — " + d.v2mapped + " with an EPD, " + (d.v2rows-d.v2mapped) + " still need one");
+      if (d.v2ex.length){
+        var f=document.createDocumentFragment();
+        d.v2ex.forEach(function(t){
+          var s=document.createElement("span"); s.className="line";
+          if (/needs EPD/.test(t)){ var i=t.indexOf("⚠"); s.appendChild(document.createTextNode(t.slice(0,i))); var w=document.createElement("span"); w.className="warn"; w.textContent=t.slice(i); s.appendChild(w); }
+          else s.textContent=t;
+          f.appendChild(s);
+        });
+        row(dl,"Products", f);
+      }
+      if (d.v2emoji==="💵") row(dl,"Note","Cost-only in the source; quantity taken from the component line.");
+      if (d.v2emoji==="✅") row(dl,"Note","Reviewed by Tollef & Ingrid — carried over unchanged.");
+    } else if (k==="C"){
+      row(dl,"Outcome","⚠️  Mirrored in Reduzer_master_NEW_9X.xlsx");
+      row(dl,"Mirror of", d.code.replace(/-9(\d)$/, "-0$1") + " (its base instance)");
+      row(dl,"Rows", d.v2rows + " product rows copied");
+      row(dl,"Why","A model object numbered -9x resolves against this copy of the real -0x instance.");
+    } else if (k==="CD"){
+      var base = d.code.replace(/-9(\d).*$/, "-0$1");
+      row(dl,"Outcome","No base instance to mirror");
+      row(dl,"Would mirror", base + " — but that instance was never created");
+      row(dl,"Group", d.code.split("-")[0] + " exists, yet its numbering starts higher (no " + base.split("-")[1] + ")");
+      row(dl,"Why","The -9x rule copies -01/-02, so with no -01/-02 in the group there is nothing to copy. Not absent, but not mirrorable.");
+    } else if (k==="B2"){
+      row(dl,"Outcome","Excluded from the build");
+      row(dl,"Why","Priced only in kroner at 1 stk — no material quantity to convert.");
+    } else {
+      row(dl,"Outcome","Not built — the element group never existed");
+      row(dl,"Why","Zero rows carry this prefix, so there is nothing to build or mirror.");
+    }
+  }
+
+  function renderPrice(){
+    var head = el("priceHead"), body = el("priceBody");
+    clear(head); clear(body);
+    var cols = VERSION==="v1"
+      ? ["Code","Material line","Priced as","Amount","Visible in"]
+      : ["Code","Material line","Amount","Test v2 outcome"];
+    cols.forEach(function(c,i){
+      var th=document.createElement("th"); if(c==="Amount"){th.className="num";} th.textContent=c; head.appendChild(th);
+    });
+    PRICE.forEach(function(p){
+      var d = byCode[p.code], tr=document.createElement("tr");
+      function td(node,cls){ var e=document.createElement("td"); if(cls)e.className=cls; if(typeof node==="string")e.textContent=node; else e.appendChild(node); return e; }
+      tr.appendChild(td(p.code,"c"));
+      tr.appendChild(td(p.mat));
+      if (VERSION==="v1"){
+        tr.appendChild(td(p.as, p.as.indexOf("no resource")>=0?"mut":""));
+        var kr=document.createElement("span"); kr.className = p.kr==="—"?"mut":"kr-fig"; kr.textContent=p.kr;
+        tr.appendChild(td(kr,"num"));
+        tr.appendChild(td(p.view, p.view==="hidden"?"mut":"mono"));
+      } else {
+        var kr2=document.createElement("span"); kr2.className = p.kr==="—"?"mut":"kr-fig"; kr2.textContent=p.kr;
+        tr.appendChild(td(kr2,"num"));
+        var b=document.createElement("span");
+        if (d.v2bucket==="A"){
+          b.className="badge built";
+          b.textContent = (d.v2emoji||"💵")+" built — "+(d.v2ex[0]?d.v2ex[0].split(" — ")[1].replace(/  ⚠needs EPD/,""):"");
+        } else { b.className="badge excl"; b.textContent="excluded — kr only"; }
+        tr.appendChild(td(b));
+      }
+      body.appendChild(tr);
+    });
+  }
+
+  function renderChapters(){
+    var head = el("chHead"), body = el("chapterBody");
+    clear(head); clear(body);
+    // [column label, matches(bucketKey), colour key for the mini-bar]
+    var cats = VERSION==="v1"
+      ? [["In test", function(k){return k==="A";},            "A"],
+         ["Cat.",    function(k){return k.charAt(0)==="B";},   "B1"],
+         ["-9x",     function(k){return k==="C";},             "C"],
+         ["Absent",  function(k){return k==="D";},             "D"]]
+      : [["Built (v1)", function(k){return k==="A";},  "A"],
+         ["Built (new)",function(k){return k==="B1";}, "B1"],
+         ["Mirrored",   function(k){return k==="C";},  "C"],
+         ["No base",    function(k){return k==="CD";}, "CD"],
+         ["Excluded",   function(k){return k==="B2";}, "B2"],
+         ["Absent",     function(k){return k==="D";},  "D"]];
+    var totCol = METRIC === "pieces" ? "Pieces" : "Codes";
+    var cols = ["Ch", totCol].concat(cats.map(function(c){return c[0];})).concat(["Mix"]);
+    cols.forEach(function(c){ var th=document.createElement("th"); if(c!=="Ch"&&c!=="Mix")th.className="num"; if(c==="Mix")th.className="bar-cell"; th.textContent=c; head.appendChild(th); });
+    var ch = {};
+    DATA.forEach(function(d){ var key=d.code.slice(0,2); var c=ch[key]||(ch[key]={rows:[]}); c.rows.push(d); });
+    Object.keys(ch).sort().forEach(function(key){
+      var c = ch[key], tr=document.createElement("tr");
+      function td(t,cls){ var e=document.createElement("td"); if(cls)e.className=cls; e.textContent=t; return e; }
+      function wsum(rows){ return rows.reduce(function(a,d){ return a + W(d); }, 0); }
+      tr.appendChild(td(key,"c"));
+      tr.appendChild(td(String(wsum(c.rows)),"num"));
+      var counts = cats.map(function(cat){ return wsum(c.rows.filter(function(d){ return cat[1](bkey(d)); })); });
+      counts.forEach(function(n){ tr.appendChild(td(n||"—","num")); });
+      var cell=document.createElement("td"); cell.className="bar-cell";
+      var mini=document.createElement("div"); mini.className="mini";
+      cats.forEach(function(cat,i){ if(!counts[i])return; var seg=document.createElement("i"); seg.style.flex=counts[i]+" 1 0"; seg.style.background=col(cat[2]); mini.appendChild(seg); });
+      cell.appendChild(mini); tr.appendChild(cell); body.appendChild(tr);
+    });
+  }
+
+  function renderAll(){
+    renderChrome(); renderFulfill(); renderDist(); renderStats();
+    renderFilters(); renderChips(); renderPrice(); renderChapters();
+    if (selected && byCode[selected]) show(selected);
+    else show(DATA[0].code);
+  }
+
+  /* ---- version switch ---- */
+  var sw = el("switch");
+  Array.prototype.forEach.call(sw.children, function(b){
+    b.addEventListener("click", function(){
+      if (VERSION===b.dataset.v) return;
+      VERSION = b.dataset.v;
+      Array.prototype.forEach.call(sw.children, function(e){ e.setAttribute("aria-pressed", e.dataset.v===VERSION?"true":"false"); });
+      renderAll();
+    });
+  });
+
+  /* ---- metric switch (count by unique code vs model pieces) ---- */
+  var msw = el("metricSwitch");
+  Array.prototype.forEach.call(msw.children, function(b){
+    b.addEventListener("click", function(){
+      if (METRIC===b.dataset.m) return;
+      METRIC = b.dataset.m;
+      Array.prototype.forEach.call(msw.children, function(e){ e.setAttribute("aria-pressed", e.dataset.m===METRIC?"true":"false"); });
+      renderAll();
+    });
+  });
+
+  selected = "26.P03-01";
+  renderAll();
+})();
+</script>
+
+
+</body>
+</html>
