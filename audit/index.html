@@ -266,8 +266,8 @@ td.c{font-family:ui-monospace,Menlo,Consolas,monospace; white-space:nowrap; font
 
   <div class="switchbar">
     <div class="switch" id="switch" role="tablist" aria-label="Test version">
-      <button type="button" data-v="v1" role="tab" aria-pressed="true">Test&nbsp;v1<small>06_Test</small></button>
-      <button type="button" data-v="v2" role="tab" aria-pressed="false">Test&nbsp;v2<small>07_Test_v.2 · both files</small></button>
+      <button type="button" data-v="v1" role="tab" aria-pressed="false">Test&nbsp;v1<small>06_Test</small></button>
+      <button type="button" data-v="v2" role="tab" aria-pressed="true">Test&nbsp;v2<small>07_Test_v.2 · both files</small></button>
     </div>
     <div class="switch" id="metricSwitch" role="tablist" aria-label="Count by">
       <button type="button" data-m="code" role="tab" aria-pressed="true">By&nbsp;code<small>unique IDs</small></button>
@@ -449,7 +449,7 @@ td.c{font-family:ui-monospace,Menlo,Consolas,monospace; white-space:nowrap; font
     {code:"24.L04-01", mat:"Flis på innervegg UE", as:"no resource rows at all", kr:"—", view:"hidden"}
   ];
 
-  var VERSION = "v1", METRIC = "code", active = "all", selected = null;
+  var VERSION = "v2", METRIC = "code", active = "all", selected = null;
   var byCode = {}; DATA.forEach(function(d){ byCode[d.code] = d; });
   function cfg(){ return CFG[VERSION]; }
   function bkey(d){ return d[cfg().field]; }
