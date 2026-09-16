@@ -1,0 +1,422 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="icon" type="image/png" href="../v.png">
+<meta property="og:title" content="Veidekke answers — resolution tracker">
+<meta property="og:description" content="Every question we emailed Veidekke: what they answered, whether we resolved it, and exactly where in the build we changed it.">
+<meta property="og:image" content="https://eduard602.github.io/lca-boards/v.png">
+<meta property="og:type" content="website">
+</head>
+<body>
+<title>Veidekke answers tracker</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root, :root[data-theme="light"]{
+    color-scheme:light;
+    --bg:#f1ece0; --surface:#fbf9f2; --surface-2:#eae5d6; --surface-3:#e1dbc9;
+    --ink:#242017; --muted:#6b6553; --faint:#968f7a; --line:#e4dece; --line-2:#d0c9b5;
+    --accent:#0e7c72; --accent-2:#0a5a53; --accent-soft:#d6ebe4;
+    --good:#2f7735; --good-bg:#e7f0df; --warn:#a4560a; --warn-bg:#f6ead6;
+    --crit:#b5211f; --crit-bg:#f7e3dd; --info:#0b6aa2; --info-bg:#e1ecf3;
+    --ref:#6321c9; --ref-bg:#eadff6;
+    --shadow:0 1px 2px rgba(72,60,33,.06),0 8px 26px rgba(72,60,33,.08);
+    --sans:"Segoe UI Variable","Segoe UI",system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;
+    --mono:"Cascadia Code","Cascadia Mono",Consolas,ui-monospace,monospace;
+    --r:14px; --r-sm:9px;
+  }
+  :root:not([data-theme="light"]){}
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      color-scheme:dark;
+      --bg:#1a1712; --surface:#241f18; --surface-2:#2c261d; --surface-3:#352e22;
+      --ink:#efe9db; --muted:#b3ab97; --faint:#8a836f; --line:#332c20; --line-2:#3f3728;
+      --accent:#42b3a5; --accent-2:#6fcabd; --accent-soft:#173a35;
+      --good:#7bbd6f; --good-bg:#1e2a18; --warn:#d99a4e; --warn-bg:#332411;
+      --crit:#e5786f; --crit-bg:#341c19; --info:#5aa9d6; --info-bg:#12252f;
+      --ref:#b294ea; --ref-bg:#241834;
+      --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 26px rgba(0,0,0,.4);
+    }
+  }
+  :root[data-theme="dark"]{
+    color-scheme:dark;
+    --bg:#1a1712; --surface:#241f18; --surface-2:#2c261d; --surface-3:#352e22;
+    --ink:#efe9db; --muted:#b3ab97; --faint:#8a836f; --line:#332c20; --line-2:#3f3728;
+    --accent:#42b3a5; --accent-2:#6fcabd; --accent-soft:#173a35;
+    --good:#7bbd6f; --good-bg:#1e2a18; --warn:#d99a4e; --warn-bg:#332411;
+    --crit:#e5786f; --crit-bg:#341c19; --info:#5aa9d6; --info-bg:#12252f;
+    --ref:#b294ea; --ref-bg:#241834;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 26px rgba(0,0,0,.4);
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.55;
+    -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  .mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 20px}
+
+  .hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+  .hero::before{content:"";position:absolute;inset:0;background:
+    radial-gradient(1100px 340px at 6% -30%,var(--accent-soft),transparent 60%);opacity:.9;pointer-events:none}
+  .hero-in{position:relative;max-width:1080px;margin:0 auto;padding:30px 20px 24px}
+  .eyebrow{font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent-2);font-weight:700}
+  h1{font-size:clamp(24px,3.4vw,33px);margin:8px 0 6px;letter-spacing:-.02em;font-weight:720;text-wrap:balance;max-width:22ch}
+  .lede{color:var(--muted);max-width:70ch;font-size:15px;margin:0}
+  .meta-row{display:flex;gap:18px;flex-wrap:wrap;margin-top:14px;font-size:12.5px;color:var(--faint)}
+  .meta-row b{color:var(--ink);font-weight:600}
+
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:20px 0 4px}
+  .tile{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 15px 13px 18px;box-shadow:var(--shadow);position:relative;text-align:left;cursor:pointer;font:inherit;color:inherit;transition:.12s}
+  .tile:hover{border-color:var(--line-2)}
+  .tile[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent),var(--shadow)}
+  .tile .n{font-family:var(--mono);font-size:29px;font-weight:680;letter-spacing:-.03em;line-height:1;font-variant-numeric:tabular-nums}
+  .tile .l{font-size:12px;color:var(--muted);margin-top:6px;font-weight:550;line-height:1.35}
+  .tile .bar{position:absolute;left:0;top:13px;bottom:13px;width:3px;border-radius:3px;background:var(--line-2)}
+  .tile.good .n{color:var(--good)}.tile.good .bar{background:var(--good)}
+  .tile.warn .n{color:var(--warn)}.tile.warn .bar{background:var(--warn)}
+  .tile.crit .n{color:var(--crit)}.tile.crit .bar{background:var(--crit)}
+  .tile.ref .n{color:var(--ref)}.tile.ref .bar{background:var(--ref)}
+  .tile.info .n{color:var(--info)}.tile.info .bar{background:var(--info)}
+
+  .bar-row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:22px 0 14px;position:sticky;top:0;z-index:15;
+    background:color-mix(in srgb,var(--bg) 90%,transparent);backdrop-filter:blur(8px);padding:10px 0}
+  .searchwrap{flex:1 1 220px;min-width:160px}
+  input.search{width:100%;font:inherit;background:var(--surface);border:1px solid var(--line-2);border-radius:10px;color:var(--ink);padding:8px 12px;font-size:13.5px}
+  input.search:focus-visible{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent)}
+  .reset{border:1px solid var(--line-2);background:var(--surface);color:var(--muted);font:inherit;font-size:12.5px;font-weight:600;padding:7px 13px;border-radius:999px;cursor:pointer}
+  .reset:hover{border-color:var(--accent);color:var(--ink)}
+
+  section.grp{margin:0 0 26px}
+  .grp-head{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin:0 0 12px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+  .grp-head h2{font-size:16px;margin:0;font-weight:700;letter-spacing:-.01em}
+  .grp-head .cnt{font-family:var(--mono);font-size:12px;color:var(--faint);font-weight:600}
+  .grp-head .blurb{flex:1 1 100%;font-size:12.5px;color:var(--muted);margin-top:2px;max-width:76ch}
+
+  .cards{display:flex;flex-direction:column;gap:12px}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);
+    border-left:3px solid var(--faint);overflow:hidden}
+  .card.good{border-left-color:var(--good)}.card.warn{border-left-color:var(--warn)}
+  .card.crit{border-left-color:var(--crit)}.card.ref{border-left-color:var(--ref)}.card.info{border-left-color:var(--info)}
+  .card-head{display:flex;gap:9px;align-items:center;flex-wrap:wrap;padding:13px 16px 9px}
+  .idchip{font-family:var(--mono);font-size:12px;font-weight:750;color:var(--bg);background:var(--ink);padding:2px 8px;border-radius:6px;letter-spacing:.02em}
+  .ttl{font-weight:650;font-size:14.5px;flex:1 1 300px;min-width:200px}
+  .chs{display:flex;gap:5px;flex-wrap:wrap}
+  .ch{font-family:var(--mono);font-size:11px;font-weight:650;color:var(--accent-2);background:var(--accent-soft);border-radius:5px;padding:2px 7px}
+  .pill{font-size:10.5px;font-weight:750;text-transform:uppercase;letter-spacing:.04em;padding:2px 9px;border-radius:999px;white-space:nowrap;display:inline-flex;align-items:center;gap:5px}
+  .pill .d{width:6px;height:6px;border-radius:50%}
+  .pill.good{color:var(--good);background:var(--good-bg)}.pill.good .d{background:var(--good)}
+  .pill.warn{color:var(--warn);background:var(--warn-bg)}.pill.warn .d{background:var(--warn)}
+  .pill.crit{color:var(--crit);background:var(--crit-bg)}.pill.crit .d{background:var(--crit)}
+  .pill.ref{color:var(--ref);background:var(--ref-bg)}.pill.ref .d{background:var(--ref)}
+  .pill.info{color:var(--info);background:var(--info-bg)}.pill.info .d{background:var(--info)}
+
+  .body{padding:2px 16px 15px;display:grid;grid-template-columns:88px 1fr;gap:3px 14px;font-size:13px}
+  .body dt{color:var(--faint);font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;font-weight:700;padding-top:8px}
+  .body dd{margin:0;padding:6px 0;border-top:1px dashed var(--line-2);line-height:1.5}
+  .body dd:first-of-type{border-top:0}
+  .a{color:var(--ink)}
+  .a b{color:var(--accent-2)}
+  .no{color:var(--faint);font-style:italic}
+  .where{font-family:var(--mono);font-size:11.5px;color:var(--muted);background:var(--surface-2);border-radius:7px;padding:7px 10px;line-height:1.6}
+  .where b{color:var(--ink);font-weight:600}
+  .flag{margin-top:7px;font-size:12px;color:var(--warn);background:var(--warn-bg);border-radius:7px;padding:6px 10px;line-height:1.5}
+  .flag::before{content:"⚠ ";font-weight:700}
+
+  footer{margin:26px 0 60px;font-size:12px;color:var(--faint);line-height:1.7;border-top:1px solid var(--line);padding-top:16px}
+  .leg{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:6px}
+  .leg span{display:inline-flex;align-items:center;gap:6px}
+  .leg i{width:9px;height:9px;border-radius:50%;display:inline-block}
+  .empty{padding:40px;text-align:center;color:var(--muted)}
+  @media (max-width:640px){.body{grid-template-columns:1fr;gap:0}.body dt{padding-top:9px;padding-bottom:1px}.body dd{padding-top:2px}}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto}}
+</style>
+
+<div class="hero">
+  <div class="hero-in">
+    <a href="../" style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:var(--accent-2);text-decoration:none;margin-bottom:6px">← File status board</a>
+    <div class="eyebrow">Veidekke × Reduzer · NS3451 LCA merge</div>
+    <h1>Answers from Veidekke — what we asked, what came back, what we resolved</h1>
+    <p class="lede">Driven by the questions in the email we sent (<span class="mono">05_email/EMAIL.html</span>).
+      Every item Veidekke engaged with — Tollef &amp; Ingrid — grouped by whether we have actually applied the
+      answer to the master, plus the ones still sitting with them. Click a tile to filter.</p>
+    <div class="meta-row">
+      <span>Updated <b>16 Sep 2026</b></span>
+      <span>Master: <b>Reduzer_master.xlsx</b> · 1 383 rows · 124 unique products</span>
+      <span>Answers dated <b>1 Sep 2026</b> (screenshots in <span class="mono">08_Answers/</span>)</span>
+      <span>Item codes <b>A/B/C/D</b> from <span class="mono">_START_HERE.md</span></span>
+    </div>
+    <p class="lede" style="margin-top:14px;padding:11px 14px;background:var(--info-bg);border:1px solid var(--line-2);border-radius:var(--r-sm);max-width:none;color:var(--ink)">
+      <b>Where things stand:</b> 8 answers are <b>resolved and in the master</b> (A9 EPS, A13 Hunton I-joists and
+      A7 steel studs applied; A1/A2/A10/A11 confirmed no-change; A4 skallvegg already mapped). 3 more are
+      <b>answered and ready to build</b> but not yet applied (A5 u-blokk, A6 tegl, A12 vindskier). 2 are
+      <b>held on an external artifact</b> (A3 Celsa rebar waiting on a Reduzer library ID; A8 Sto Ventec R
+      waiting on the EPD). The rest need our own decision, Herman, or a file/meeting.
+    </p>
+  </div>
+</div>
+
+<div class="wrap">
+  <section class="tiles" id="tiles"></section>
+
+  <div class="bar-row">
+    <span class="searchwrap"><input class="search" id="q" placeholder="Search items, chapters, EPDs…" autocomplete="off" aria-label="Search"></span>
+    <button class="reset" id="reset" hidden>Clear filter</button>
+  </div>
+
+  <div id="view"></div>
+  <div class="empty" id="empty" hidden>Nothing matches.</div>
+
+  <footer>
+    <div><b>Resolution states.</b> Resolved = the answer is applied to <span class="mono">Reduzer_master.xlsx</span>.
+      Ready = the change is confirmed and specified but not yet built. Held = answered but blocked on a library ID,
+      an EPD PDF, or a new file. Needs decision = Veidekke gave a direction that leaves a call to us. To Herman /
+      Deflected = punted on their side. Awaiting = still no answer.</div>
+    <div class="leg" style="margin-top:10px">
+      <span><i style="background:var(--good)"></i> Resolved &amp; applied</span>
+      <span><i style="background:var(--accent)"></i> Ready to apply</span>
+      <span><i style="background:var(--crit)"></i> Held on ID / file</span>
+      <span><i style="background:var(--ref)"></i> Needs our decision</span>
+      <span><i style="background:var(--warn)"></i> Deflected / to Herman</span>
+      <span><i style="background:var(--info)"></i> Awaiting answer</span>
+    </div>
+    <div style="margin-top:12px">Answer wording is quoted or paraphrased from the screenshots in
+      <span class="mono">08_Answers/</span>; decisions and code locations from <span class="mono">DECISIONS.md</span>
+      and <span class="mono">04_reports/</span>. This page is our two-column view — Veidekke's own file is untouched.</div>
+  </footer>
+</div>
+
+<script>
+const STATES = {
+  resolved:{label:"Resolved & applied", tone:"good",  blurb:"The answer is in the master. Applied via build_master.py and rebuilt; reports in 04_reports/."},
+  ready:   {label:"Answered — ready to apply", tone:"accent", blurb:"Confirmed and specified, extractor change not yet built. These are the next apply run."},
+  held:    {label:"Answered — held on a library ID or file", tone:"crit", blurb:"We have the answer but cannot apply it until an EPD / Reduzer ID / correct file exists."},
+  decide:  {label:"Answered — needs our decision", tone:"ref", blurb:"Veidekke gave a direction that still leaves a call, a factor, or a reconciliation to us."},
+  herman:  {label:"Routed to Herman", tone:"warn", blurb:"Tollef handed these to Herman (element / steel EPDs are his domain)."},
+  deflected:{label:"Not answered / deflected by Veidekke", tone:"warn", blurb:"Parked on their side — needs a meeting, a mass, or a file they still owe us."},
+  awaiting:{label:"Sent — no answer yet", tone:"info", blurb:"Confirmations and one blocking question that were emailed but are not in Veidekke's answer set."},
+};
+const TONE = {resolved:"good",ready:"accent",held:"crit",decide:"ref",herman:"warn",deflected:"warn",awaiting:"info"};
+// accent has no card/pill class of its own — map to a green-teal 'good'? no: use dedicated below
+const CARDCLS = {resolved:"good",ready:"info",held:"crit",decide:"ref",herman:"warn",deflected:"warn",awaiting:"info"};
+
+const D=[
+// ---------------- RESOLVED ----------------
+{id:"A9",s:"resolved",ch:["23","232"],ttl:"Grunnmursplate EPS S80 → Sundolitt EPS",
+ q:"EPS foundation board was booked in m³ but had no EPS EPD — we would not reuse the XPS ids (different material, much lower density). Asked for an EPS S80 EPD.",
+ a:"“Use <b>Sundolitt</b> for this too.” Linked the epddanmark PDF for MD-24182-EN.",
+ did:"Mapped the Grunnmursplate EPS lines to Sundolitt EPS S80 (per m³, no conversion — source qty already m³). Applied 3 Sep, master rebuilt unchanged at 1 383 rows.",
+ where:"<b>group_assign_232</b> — “grunnmursplate eps” → <b>NdaQivcjzeX8sU9LLykS</b> · added to epd_registry.json · report <b>2026-09-03_apply_A9_A13.md</b>"},
+{id:"A13",s:"resolved",ch:["26","261"],ttl:"I-bjelker → Hunton per-metre I-joist EPD",
+ q:"12 engineered I-joist lines (Sperretak / Kubbing / Hanebjelke av lettprofiler, resource HUNTON / MASONITE I-BJELKE) had no EPD and no derivable mass. Approve a per-metre I-joist EPD?",
+ a:"“<b>Yes, use Hunton.</b>”",
+ did:"Mapped all 12 lines to STEICOjoist / Hunton I-bjelke SJ60/350, declared per metre (4.80 kg/m) — quantity stays in m, no conversion. Applied 3 Sep.",
+ where:"<b>group_assign_26</b> — I-bjelker group → <b>cnfOYXKka9MJFaeCB1BL</b> · _IBEAM26_NOTE · report <b>2026-09-03_apply_A9_A13.md</b>"},
+{id:"A7",s:"resolved",ch:["23","232"],ttl:"Steel studs (tynnplateprofiler) lm → kg",
+ q:"Thin-plate steel studs/rails (100/150/200/250 mm) were booked in lm, but every steel EPD is per kg. We proposed a kg/m-by-profile table + the Enova ‘Thin steel profile’ EPD. Confirm the table and EPD.",
+ a:"“<b>Use as proposed.</b>”",
+ did:"Already in the master and now confirmed: each row’s profile is read off its resource code and converted lm → kg via the kg/m table (45→0.62, 75→0.74, 95→0.84, 120→0.98, 160→1.09, 200→1.36) on the Enova thin-profile EPD. No change needed.",
+ where:"<b>group_assign_232</b> — “bindingsverk av stål” → <b>cXU298TKhfQKCeNiz1q1</b> · conversion table <b>STEEL_PROFILE_KG_M</b>",
+ flag:"Residual open: THR245 / THSP245 (245 mm, 1.0 mm plate) fall off the top of the table — clamped to 200 mm and understated. kg/m for the 245 profiles still requested from Veidekke."},
+{id:"A4",s:"resolved",ch:["23","231"],ttl:"Skallvegg 50-50 twin-wall",
+ q:"Precast twin-wall (skallvegg) on Con-Form ‘Shell wall (Orkanger)’ per-m² EPD, de-wasted 1.07 → 1.00 m²/m², with the reinforcement already inside the EPD (so no separate rebar line). Confirm the approach.",
+ a:"“<b>The approach is good.</b>”",
+ did:"Already applied: Con-Form shell-wall EPD per m², plus a derived EPS insulation line added to the two ‘Skallvegg isolert’ elements (23.A10-02/-05) where the model had none.",
+ where:"<b>group_assign_231</b> — skallvegg → <b>C8lhsdUgnH7jj0DxQGtt</b> · derived-EPS synth pass · derived rebar deliberately NOT added",
+ flag:"C3 raises an alternative reading (split into 0.1 m³/m² precast concrete + 10.5 kg/m² rebar on a chosen precast dataset). The current build uses the Con-Form per-m² EPD instead — reconcile before locking."},
+{id:"A1",s:"resolved",ch:["21","216","223"],ttl:"Concrete EPD — normal + watertight",
+ q:"Both normal and watertight concrete sit on the generic low-carbon dataset; nothing distinguishes vanntett from ordinary betong. And the EPD reads B45 while Tollef earlier said B40. Confirm the class / whether watertight needs its own EPD.",
+ a:"“<b>OK to use the same, till further advised.</b>”",
+ did:"No change — kept low-carbon 20 on both normal and watertight rows across 21X.",
+ where:"<b>EPD_ASSIGN</b> — 216 concrete keys → <b>sy0z9WpGr2zoNwIGfNDy</b>",
+ flag:"The exact class label (B45 vs B40 low-carbon 20) was never firmed up — still worth pinning in a future round."},
+{id:"A2",s:"resolved",ch:["21","216"],ttl:"XPS insulation brand",
+ q:"XPS 250 / 300 kPa on the Sundolitt board EPDs, converted m² → m³. Confirm the generic/standard brand choice or send the specific brand.",
+ a:"“<b>It is okay.</b>” (Sundolitt 250 &amp; 300 kPa accepted.)",
+ did:"No change — kept the two Sundolitt XPS ids.",
+ where:"<b>EPD_ASSIGN</b> — 216 XPS keys → <b>OYvuKLsimyPXkrQt26gl</b> (250) · <b>frbmxcvvxYwz9LwYyN1h</b> (300)"},
+{id:"A10",s:"resolved",ch:["26","261"],ttl:"Renamed / dropped lines in the roof file",
+ q:"Four lines are misnamed in the source and renamed from the resource before grouping — I-bjelke, Svillemembran, Fugemasse, Lekter — and we drop the stray Fugemasse tube. Confirm.",
+ a:"All confirmed; <b>Fugemasse → drop ✔</b>, I-bjelke ✔, Svillemembran ✔, Lekter ✔.",
+ did:"Matches the current build — the renames are in place and the Fugemasse row is excluded.",
+ where:"resource-rename pass in extraction · <b>MATERIAL_EXCLUDED</b> (fugemasse) · group_name_26"},
+{id:"A11",s:"resolved",ch:["26","261"],ttl:"Roof conversions & Svinn strip",
+ q:"Chapter-261 conversions are driven per row from the resource (timber m→m³, membranes rull→m², insulation m²→m³ by thickness) and the file is waste-stripped (col W Svinn). Confirm the interpretation and that the quantities were gross of svinn.",
+ a:"“<b>All OK</b> / the strip is correct.”",
+ did:"No change — confirms the current build.",
+ where:"per-row resource conversions in chapter-26 pipeline · SVINN_IF_DIFFERS strip"},
+
+// ---------------- READY ----------------
+{id:"A5",s:"ready",ch:["23","231"],ttl:"Leca u-blokk — keep the tørrbetong",
+ q:"The whole u-blokk build-up (block + LECA U-BLOKKARMERING + WEBER B20 TØRRBETONG, 9 rows across 23.B01-01/02/03) is currently dropped entirely, which also retired the old ‘what density for the tørrbetong’ question.",
+ a:"“You can <b>neglect the strips</b>. Use <b>density 2000 kg/m³</b>.” — i.e. keep the dry concrete, not drop it.",
+ did:"Not yet applied. Plan: reverse the blanket drop — keep WEBER B20 tørrbetong, convert kg → m³ at 2000 kg/m³ onto the concrete EPD; still drop the two reinforcement strips.",
+ where:"remove the <b>u-blokk</b> case from <b>MATERIAL_EXCLUDED</b>; re-activate the tørrbetong branch in <b>group_name_231 / group_assign_231</b> (currently marked unreachable)",
+ flag:"Answer speaks only to the strips + the tørrbetong. Whether the Leca U-block body itself is also kept is not stated — confirm before building."},
+{id:"A6",s:"ready",ch:["23","232"],ttl:"Teglforblending — keep only the m² line",
+ q:"Each brick format (Dansk/Tysk/Finsk/Langformat = 62/56/45/37 bricks/m²) is three rows in m² / m / kg with an identical name. The resource shows the m² row already contains the whole assembly — bricks, ties, murarmering AND mortar — so the m and kg rows duplicate it.",
+ a:"“The <b>m² line contains complete brickworks</b>. All are used at different times, the elements have different IDs — that is then OK.”",
+ did:"Not yet applied. Plan: keep only the m² rows, drop the duplicate m &amp; kg rows; keep all four formats.",
+ where:"<b>group_name_232 / group_assign_232</b> — teglforblending (currently a blocker); add an extraction drop for the m &amp; kg rows",
+ flag:"Brick EPD per format was never named by Veidekke — the m² lines will carry no EPD until that open email question (C4) is answered."},
+{id:"A12",s:"ready",ch:["26","261"],ttl:"Vindskier av tre — keep the middle width",
+ q:"‘Vindskier av tre’ appears three times per element (GRAN 22×148, 22×173, 22×198) each at exactly 0.2 m/m², which reads as width alternatives rather than three boards actually fitted. Are all three fitted, or is only one real?",
+ a:"“<b>Alternatives — use the middle one.</b>” (22×173.)",
+ did:"Not yet applied. Plan: keep the 22×173 vindski rows, drop the 22×148 and 22×198 rows.",
+ where:"extraction filter on the vindskier rows in the chapter-261 pipeline (keep resource GRAN 22X173, drop 148 / 198)"},
+
+// ---------------- HELD ----------------
+{id:"A3",s:"held",ch:["all","21","22","23","25"],ttl:"Rebar → Celsa (every chapter)",
+ q:"The rebar id we use everywhere is the Enova generic ‘Reinforcing steel’, not a Celsa product EPD as our old notes claimed. Send your supplier’s rebar EPD and we swap it in across all chapters at once.",
+ a:"“<b>Only buy from Celsa</b> — EPD-IES-0000306:006 (S-P-00306).”",
+ did:"Held. The exact Celsa EPD is not in the Reduzer library (the only Celsa entry, CZW86…, is a NEPD registration expired 2021 — wrong doc). Colleague message SENT 3 Sep to add S-P-00306 to the Global library. Rebar stays on the Enova generic until the Reduzer ID exists.",
+ where:"when the ID lands: every ‘armering’ branch — <b>EPD_ASSIGN</b> 216/213, <b>group_assign_223/251/252/231</b>, plus derived skallvegg rebar and the 80 kg/m³ deck rebar (all currently <b>K1GLOoaSiXFa6AUukxY7</b>)",
+ flag:"Biggest single ripple in the job — it reverses the documented default and touches every chapter. Blocked until the S-P-00306 Reduzer ID is created."},
+{id:"A8",s:"held",ch:["23","232"],ttl:"Sto Ventec accessories → merge to one",
+ q:"Five accessory rows whose material name is literally a number (.030 / .042 / .043 / .044 / .068) sit under the Sto Ventec render system. Name the exact StoVentec system so we can cost it per m² in one go.",
+ a:"“All are included in the <b>Sto Ventec EPD</b>, so they can be merged to one. <b>Use Sto Ventec R.</b>”",
+ did:"Held. StoVentec R is not in the library and Veidekke gave no PDF or EPD number. The merge-to-one structure can be built with the EPD id left blank, but the number itself must be sourced or requested first.",
+ where:"<b>group_name_232</b> — the .030/.042… ghost groups → one ‘Sto Ventec R’ line (id blank pending the EPD)",
+ flag:"Need Sto’s StoVentec R system EPD (per-m²) sourced or sent before this can map."},
+
+// ---------------- DECIDE ----------------
+{id:"C1",s:"decide",ch:["25","251","252"],ttl:"Spennkabler — 15 kg/m³ against an m² quantity",
+ q:"Prestressed cables (Armering med spennkabler, 8 lines in 251 + 4 in 252) are booked in m², which no steel EPD can use. We asked for kg of steel per m² of deck.",
+ a:"They gave <b>15 kg/m³</b> — but the quantity is in m². Tollef asks whether we can apply it despite the unit mismatch.",
+ did:"Not applicable as-is. Our call: multiply by deck thickness → m³, then × 15 kg/m³ → kg, or agree another reading. Then map onto the rebar EPD.",
+ where:"<b>group_assign_251 / group_assign_252</b> — “spennkabler” (currently a blocker)",
+ flag:"BLOCKER until the m²→kg method is decided. Same numbers also feed the 251 DT-elements (D5)."},
+{id:"C2",s:"decide",ch:["21"],ttl:"Which generics move to Enova / Boverket",
+ q:"Alongside the brand-specific answers (‘Sundolitt is okay’), Veidekke expressed a general preference to use Enova or Boverket generics.",
+ a:"“Use <b>Enova or Boverket</b>” as a general steer — but no list of which specific products should switch.",
+ did:"Needs a decision on which of our current picks actually change. Note Boverket generics were previously excluded by Eduard’s instruction, so this may reopen that.",
+ where:"cross-cutting — affects EPD picks across chapters; no single code site until scoped"},
+{id:"C3",s:"decide",ch:["23","231"],ttl:"Precast concrete EPD for skallvegg",
+ q:"The skallvegg approach is approved (A4), but if we split it into concrete + rebar rather than the Con-Form per-m² EPD, ‘Bjelke og søyler’ is the wrong product family.",
+ a:"Approach approved; correct precast dataset for the split method not chosen.",
+ did:"Decide: keep the Con-Form ‘Shell wall (Orkanger)’ per-m² EPD already in the build (A4), or switch to a split (0.1 m³/m² precast concrete + 10.5 kg/m² rebar) on a precast dataset to be picked.",
+ where:"<b>group_assign_231</b> — skallvegg (reconcile with A4)"},
+{id:"C4",s:"decide",ch:["23","232"],ttl:"Brick EPD per format (teglforblending)",
+ q:"Which brick EPD(s) to assign per format — Dansk / Tysk / Finsk / Langformat?",
+ a:"Veidekke named <b>no brick EPD</b> — only that the m² line is the complete brickwork (A6).",
+ did:"Open email question to Veidekke: which brick EPD per format. The A6 structure (keep m² rows) can ship with the EPD id left blank per format. — The other four C4 lookups are done or held: Sundolitt EPS ✅ (A9), Hunton ✅ (A13), Celsa ⏸ (A3), Sto Ventec R ⏸ (A8).",
+ where:"<b>group_assign_232</b> — teglforblending (id blank per format pending the answer)"},
+
+// ---------------- HERMAN ----------------
+{id:"B1",s:"herman",ch:["23","232"],ttl:"Beslag / blikk (~35 rows)",
+ q:"~35 flashing rows where the same material appears in m, m² and kg, two rows have a blank unit, and the resource is a price placeholder — not mappable as it stands. One consistent unit + a gauge, or exclude?",
+ a:"Tollef punted: “<b>Question for Herman — is this excludable?</b>”",
+ did:"Parked pending Herman. (Sokkelbeslag is already split out and mapped m²→kg; the rest of the beslag group stays a blocker.)",
+ where:"<b>group_assign_232</b> — “beslag og blikk” (blocker) · Sokkelbeslag handled separately"},
+{id:"B2",s:"herman",ch:["23","26","231","232","261"],ttl:"Sandwich / prefab facade element EPDs",
+ q:"Prefab / sandwich facade elements (23.G05, 232 sandwich menu, 26.J06 sandwich, 26.L01 curtainwall) — per-m² element EPDs.",
+ a:"Tollef: put <b>Herman</b> on it — element EPDs are his domain.",
+ did:"Parked pending Herman.",
+ where:"blockers in group_assign_231 / group_assign_232 / group_assign_26 (facade & element groups)"},
+{id:"B3",s:"herman",ch:["22","223"],ttl:"223 steel EPDs",
+ q:"223 steel — Bjelker, Gitterdrager, Egendefinert fagverk, Stålvinkel, plus the Prefab betongbjelke — need the right EPDs; Gitterdrager also have no mass behind them (1 stk, priced in kr).",
+ a:"Herman’s (pre-existing).",
+ did:"Parked pending Herman. Steel-in-kg lines carry interim Enova generics; the four Gitterdrager stay blocked on a mass.",
+ where:"<b>group_assign_223</b> — valseprofil / oppsveist / fagverk / vinkel / gitterdrager"},
+
+// ---------------- DEFLECTED ----------------
+{id:"D1",s:"deflected",ch:["23","231"],ttl:"23.G05 prefab betong facade 450 mm",
+ q:"Isolerte fasadeelementer i prefab betong (450 mm) — 1 m² each, empty resource, no mass. Send a per-m² EPD, the plant, or a material split.",
+ a:"“Project-specific… can I be prompted about this?” — no EPD or mass given.",
+ did:"On hold (blocker). Nothing to calculate until a mass or a per-m² EPD arrives.",
+ where:"<b>group_assign_231</b> — “isolerte fasadeelementer” (blocker)"},
+{id:"D2",s:"deflected",ch:["23","232"],ttl:"232 cladding ‘menu’ (~20 lines)",
+ q:"~20 cladding/element lines booked at exactly 1.00 m²/m² with an empty resource, spread across element groups — our reading is these are alternative cladding choices, not co-existing layers, so most should be excluded.",
+ a:"“<b>We need to talk about this</b> — I don’t quite understand what to do.”",
+ did:"On hold — needs a meeting to decide which claddings are real. Nothing in this group has an EPD.",
+ where:"<b>group_assign_232</b> — the _FACADE232 menu (blocker)",
+ flag:"The single biggest open question in chapter 23."},
+{id:"D3",s:"deflected",ch:["26","261"],ttl:"26 four mass-less element lines",
+ q:"26.A01 stålplatetak, 26.E01 Lett-tak elementer, 26.J06 sandwich, 26.L01 curtainwall — 1 m² each, resource is a price line, no mass. Send kg/m² or a per-m² element EPD.",
+ a:"“Need a work-around — the build-up varies a lot.” Pointed at Lett-Tak Systemer / supplier per-m² EPDs.",
+ did:"On hold (blocker) — same case as the 251 DT-elements.",
+ where:"<b>group_assign_26</b> — Lett-tak / stålplatetak / sandwich / curtainwall (blocker)"},
+{id:"D4",s:"deflected",ch:["22","222"],ttl:"222-I is the wrong export",
+ q:"We believe the delivered 222 file is a work-in-progress export (TestTilReduzer2, full unfiltered sheet, #VALUE! working columns). Is this the file you meant, and if not send the clean one?",
+ a:"“We sent a new file earlier.” — our export is the wrong one.",
+ did:"On hold on Veidekke’s side. The 265 visible rows stay merged meanwhile; we redo the chapter on the correct file when it arrives. The eight detailed 222 questions are held back (05_email/archive_222_questions.html).",
+ where:"whole 222 branch — re-run against the new file once received"},
+{id:"D5",s:"deflected",ch:["25","251"],ttl:"DT-elementer t = 500–800 mm",
+ q:"DT-elements given in m² with no mass. Send m³ of element per m² (per thickness), then one EPD covers the whole element (do not split into concrete + steel).",
+ a:"Still no numbers.",
+ did:"On hold (blocker) — same mass-less problem as D3.",
+ where:"<b>group_assign_251</b> — “dt-element” (blocker)"},
+
+// ---------------- AWAITING ----------------
+{id:"26.O",s:"awaiting",ch:["26","261"],ttl:"26.O01 vs 26.O02 — same roof entered twice?",
+ q:"26.O02 is a line-for-line clone of 26.O01 across all four variants (106 rows, 45% of the chapter). It may be two real roof areas of the same construction, or the roof entered twice — nothing in the file distinguishes them. Also: each m² includes the ceiling build-up, which double-counts if the ceiling lives in a chapter we haven’t received.",
+ a:"",
+ did:"No answer in Veidekke’s set. This is the biggest single lever on the chapter total (~2×) and is still open — the master keeps both as delivered.",
+ where:"chapter-261 scope — no change until answered",
+ flag:"Sent as BLOCKING; not in the 1 Sep answers. Chase this one."},
+{id:"—",s:"awaiting",ch:["21","25","23"],ttl:"Open confirmations still unanswered",
+ q:"A cluster of CONFIRM items emailed but not addressed in Veidekke’s answers.",
+ a:"",
+ did:"Still open, applied on our best assumption meanwhile: concrete class label B45 vs B40 (21/213-216/223); impregnated glulam sharing the gran EPD (223/222); HD 200 → HD 210 substitution (251); mineral-wool assumption + derived rebar 80 kg/m³ (251); Magerbetong B20 vs your B30 (252); Comax include/exclude (252); fugearmering 18 mm bar vs strip, teglkonsoll 2×50 mm double-count, Leca pussmørtel vs the per-m² Leca EPD, Isolering av vegg Rockwool vs generic, zero-qty rows (231/232).",
+ where:"various — each carries a note in the master and a thread on the file board"},
+];
+
+const tilesEl=document.getElementById('tiles'), viewEl=document.getElementById('view'),
+      qEl=document.getElementById('q'), resetEl=document.getElementById('reset'), emptyEl=document.getElementById('empty');
+let filter=null;
+
+const order=["resolved","ready","held","decide","herman","deflected","awaiting"];
+const counts=Object.fromEntries(order.map(k=>[k,D.filter(d=>d.s===k).length]));
+const tileTone={resolved:"good",ready:"info",held:"crit",decide:"ref",herman:"warn",deflected:"warn",awaiting:"info"};
+
+tilesEl.innerHTML=order.map(k=>`
+  <button class="tile ${tileTone[k]}" data-k="${k}" aria-pressed="false">
+    <span class="bar"></span><div class="n">${counts[k]}</div><div class="l">${STATES[k].label}</div>
+  </button>`).join('');
+
+function chip(c){return `<span class="ch">${c==='all'?'all ch':c}</span>`;}
+function card(d){
+  const cls=CARDCLS[d.s], pillTxt=STATES[d.s].label;
+  return `<div class="card ${cls}" data-s="${d.s}">
+    <div class="card-head">
+      <span class="idchip">${d.id}</span>
+      <span class="ttl">${d.ttl}</span>
+      <span class="chs">${d.ch.map(chip).join('')}</span>
+      <span class="pill ${cls}"><span class="d"></span>${pillTxt}</span>
+    </div>
+    <dl class="body">
+      <dt>Question</dt><dd>${d.q}</dd>
+      <dt>They said</dt><dd>${d.a?`<span class="a">${d.a}</span>`:`<span class="no">No answer / deflected</span>`}</dd>
+      <dt>What we did</dt><dd>${d.did}</dd>
+      <dt>Where</dt><dd><div class="where">${d.where}</div>${d.flag?`<div class="flag">${d.flag}</div>`:''}</dd>
+    </dl>
+  </div>`;
+}
+function render(){
+  const q=qEl.value.trim().toLowerCase();
+  let any=false;
+  viewEl.innerHTML=order.map(k=>{
+    if(filter&&filter!==k) return '';
+    let items=D.filter(d=>d.s===k);
+    if(q) items=items.filter(d=>(d.id+' '+d.ttl+' '+d.q+' '+d.a+' '+d.did+' '+d.where+' '+d.ch.join(' ')).toLowerCase().includes(q));
+    if(!items.length) return '';
+    any=true;
+    return `<section class="grp"><div class="grp-head">
+      <h2>${STATES[k].label}</h2><span class="cnt">${items.length}</span>
+      <div class="blurb">${STATES[k].blurb}</div></div>
+      <div class="cards">${items.map(card).join('')}</div></section>`;
+  }).join('');
+  emptyEl.hidden=any;
+  resetEl.hidden=!(filter||q);
+}
+tilesEl.addEventListener('click',e=>{
+  const b=e.target.closest('.tile'); if(!b)return;
+  const k=b.dataset.k; filter=(filter===k)?null:k;
+  [...tilesEl.children].forEach(t=>t.setAttribute('aria-pressed',String(t.dataset.k===filter)));
+  render();
+});
+qEl.addEventListener('input',render);
+resetEl.addEventListener('click',()=>{filter=null;qEl.value='';[...tilesEl.children].forEach(t=>t.setAttribute('aria-pressed','false'));render();});
+render();
+</script>
+</body>
+</html>
