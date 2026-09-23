@@ -3,15 +3,54 @@
 <head>
 <meta charset="utf-8">
 <link rel="icon" type="image/png" href="v.png">
-<meta property="og:title" content="Veidekke × Reduzer — LCA merge status">
-<meta property="og:description" content="Source-file status, EPD-mapping progress and open items for the NS3451 LCA merge.">
+<meta property="og:title" content="Veidekke meeting board">
+<meta property="og:description" content="Meeting board: Veidekke answers by status (applied / pending data / open questions), file status and open items.">
 <meta property="og:image" content="https://eduard602.github.io/lca-boards/v.png">
 <meta property="og:type" content="website">
 </head>
 <body>
-<title>Veidekke × Reduzer — LCA merge status</title>
+<title>Veidekke meeting board</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
+  /* ---- meeting tab (mv-) ---- */
+  .mv-prog{display:flex;height:12px;border-radius:7px;overflow:hidden;border:1px solid var(--line);margin:16px 0 6px;max-width:640px}
+  .mv-prog i{display:block}
+  .mv-lbl{font-size:12.5px;color:var(--muted);margin:0 0 14px}
+  .mv-lbl b{color:var(--ink)}
+  .mv-grp{margin:22px 0 6px}
+  .mv-gh{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin:0 0 10px;padding-bottom:8px;border-bottom:2px solid var(--line-2)}
+  .mv-gh h3{font-size:16px;margin:0;font-weight:720;letter-spacing:-.01em}
+  .mv-gh .cnt{font-family:var(--mono);font-size:12px;color:var(--faint);font-weight:600}
+  .mv-gh .bl{flex:1 1 100%;font-size:12.5px;color:var(--muted);margin-top:2px;max-width:82ch}
+  .mv-cards{display:flex;flex-direction:column;gap:9px}
+  details.mv-card{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--faint);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden}
+  details.mv-card.good{border-left-color:var(--good)}details.mv-card.info{border-left-color:var(--info)}
+  details.mv-card.warn{border-left-color:var(--warn)}details.mv-card.crit{border-left-color:var(--crit)}
+  .mv-card summary{list-style:none;cursor:pointer;display:flex;gap:9px;align-items:center;flex-wrap:wrap;padding:11px 15px}
+  .mv-card summary::-webkit-details-marker{display:none}
+  .mv-card summary:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+  .mv-card .caret{color:var(--faint);font-size:11px;flex:none;transition:transform .15s}
+  details.mv-card[open] .caret{transform:rotate(90deg)}
+  .mv-id{font-family:var(--mono);font-size:12px;font-weight:750;color:var(--bg);background:var(--ink);padding:2px 8px;border-radius:6px;flex:none}
+  .mv-tw{flex:1 1 240px;min-width:160px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .mv-t{font-weight:650;font-size:14px}
+  details.mv-card.done .mv-t{text-decoration:line-through;text-decoration-color:var(--faint);text-decoration-thickness:1.5px;color:var(--muted)}
+  .mv-check{color:var(--good);font-weight:800;flex:none}
+  .mv-ch{font-family:var(--mono);font-size:10.5px;font-weight:650;color:var(--accent-2);background:var(--accent-soft);border-radius:5px;padding:1px 6px}
+  .mv-pill{font-size:10px;font-weight:750;text-transform:uppercase;letter-spacing:.04em;padding:2px 9px;border-radius:999px;white-space:nowrap;flex:none}
+  .mv-pill.good{color:var(--good);background:var(--good-bg)}.mv-pill.info{color:var(--info);background:var(--info-bg)}
+  .mv-pill.warn{color:var(--warn);background:var(--warn-bg)}.mv-pill.crit{color:var(--crit);background:var(--crit-bg)}
+  .mv-body{padding:0 15px 14px;display:grid;grid-template-columns:92px 1fr;gap:2px 14px;font-size:13px;border-top:1px solid var(--line);margin-top:2px;padding-top:10px}
+  .mv-body dt{color:var(--faint);font-size:10px;text-transform:uppercase;letter-spacing:.05em;font-weight:700;padding-top:8px}
+  .mv-body dd{margin:0;padding:6px 0;line-height:1.5}
+  .mv-body dd b{color:var(--accent-2)}
+  .mv-need{color:var(--crit);font-weight:600}.mv-wait{color:var(--warn);font-weight:600}
+  .mv-where{font-family:var(--mono);font-size:11px;color:var(--muted);background:var(--surface-2);border-radius:7px;padding:6px 10px;line-height:1.55}
+  .mv-where b{color:var(--ink);font-weight:600}
+  .mv-modebtn{border:1px solid var(--line-2);background:var(--surface);color:var(--muted);font:inherit;font-size:12.5px;font-weight:650;padding:7px 13px;border-radius:999px;cursor:pointer}
+  .mv-modebtn[data-on="1"]{border-color:var(--accent);color:var(--accent-2)}
+  body.client .internal-only{display:none!important}
+  @media (max-width:640px){.mv-body{grid-template-columns:1fr}}
   :root, :root[data-theme="light"], :root[data-theme="dark"]{
     color-scheme:light;
     --bg:#f1ece0; --surface:#fbf9f2; --surface-2:#eae5d6; --surface-3:#e1dbc9;
@@ -237,15 +276,23 @@
 
   <div class="bar-row">
     <div class="tabs" role="tablist">
-      <button class="tab" role="tab" aria-selected="true" data-view="files">By file</button>
+      <button class="tab" role="tab" aria-selected="true" data-view="meeting">Meeting</button>
+      <button class="tab" role="tab" aria-selected="false" data-view="files">By file</button>
       <button class="tab" role="tab" aria-selected="false" data-view="comments">All comments</button>
     </div>
+    <button class="mv-modebtn" id="modeToggle" type="button" data-on="0" title="Show code locations & EPD IDs">Client view</button>
     <span class="spacer"></span>
     <input class="search" id="code" style="flex:0 0 auto;max-width:186px" placeholder="Chapter code — 22, 223…" inputmode="numeric" autocomplete="off" aria-label="Filter by NS3451 chapter code">
     <span class="searchwrap"><input class="search" id="q" placeholder="Search files, comments…" autocomplete="off"></span>
   </div>
 
   <div class="chips" id="chips"></div>
+
+  <div id="meetingView">
+    <div class="mv-prog" id="mvProg" aria-hidden="true"></div>
+    <div class="mv-lbl" id="mvLbl"></div>
+    <div id="mvBody"></div>
+  </div>
 
   <div id="filesView">
     <div class="board"><div class="scroll"><table>
@@ -487,7 +534,7 @@ document.getElementById("tiles").innerHTML=[
  {n:nAns,l:"Answered",sub:"answered by Tollef",c:"good"},
 ].map(t=>`<div class="tile ${t.c}"><span class="bar"></span><div class="n">${t.n}</div><div class="l">${t.l}</div><div class="sub">${t.sub}</div></div>`).join("");
 
-let view="files", cfilter="all", code="", q="", sort={col:"chapter",dir:1};
+let view="meeting", cfilter="all", code="", q="", sort={col:"chapter",dir:1};
 const ownerName=b=>({T:"Tollef",I:"Ingrid"}[b]||"—");
 const codeMatch=(d)=>!code||d.ch.split(/[&\s]+/).filter(Boolean).some(x=>x.startsWith(code));
 const rank={D:0,P:1,H:1,W:1,O:1,N:2};
@@ -607,9 +654,13 @@ function renderComments(){
     </div>`).join("");
 }
 function render(){
+  const mv=view==="meeting";
+  document.getElementById("meetingView").hidden=!mv;
   document.getElementById("filesView").hidden=view!=="files";
   document.getElementById("commentsView").hidden=view!=="comments";
-  if(view==="files")renderFiles(); else renderComments();
+  document.getElementById("chips").hidden=mv;
+  document.getElementById("code").style.display=mv?"none":"";
+  if(mv)renderMeeting(); else if(view==="files")renderFiles(); else renderComments();
 }
 document.querySelector(".tabs").addEventListener("click",e=>{const b=e.target.closest(".tab");if(!b)return;
   view=b.dataset.view;document.querySelectorAll(".tab").forEach(t=>t.setAttribute("aria-selected",t.dataset.view===view));render();});
@@ -627,6 +678,87 @@ document.getElementById("cbody").addEventListener("click",e=>{const t=e.target.c
   const row=document.querySelector(`tr.row[data-f="${CSS.escape(t.dataset.goto)}"]`);if(row)row.scrollIntoView({block:"center"});});
 document.getElementById("code").addEventListener("input",e=>{code=e.target.value.replace(/[^0-9]/g,"");render();});
 document.getElementById("q").addEventListener("input",e=>{q=e.target.value.trim().toLowerCase();render();});
+
+// ===== Meeting tab: Veidekke answers, status-first =====
+const MG={
+  q:{label:"Open questions & decisions", tone:"crit", blurb:"Needs a call \u2014 a decision that\u2019s ours to make, or a direction only Veidekke can give. The meeting agenda, in effect."},
+  data:{label:"Pending data \u2014 waiting on Veidekke / Herman", tone:"warn", blurb:"We\u2019ve done our part; blocked on a file, an EPD document, a library ID, or a mass/number. Each card says what we\u2019re waiting for."},
+  ready:{label:"Ready on our side \u2014 answered, next build", tone:"info", blurb:"Answered and specified; just needs our next extractor run. No decision or data outstanding."},
+  done:{label:"Fully done \u2014 applied to the master", tone:"good", blurb:"Answer received and built into the master / CSV store. Verified. Nothing needed from Veidekke."},
+};
+const MORD=["q","data","ready","done"];
+const MD=[
+{id:"D2",s:"q",ch:["23","232"],ttl:"232 cladding 'menu' \u2014 which claddings are real?",a:"\u201cWe need to talk about this \u2014 I don\u2019t quite understand what to do.\u201d",did:"~20 lines / 39 rows priced per m\u00b2 with no resource. Our reading: alternative claddings (a menu), not co-existing layers \u2014 so most should be excluded. Nothing here has an EPD.",need:"Which cladding types are actually used, and a mass/thickness for those. Biggest single question in ch 23.",where:"group_assign_232 \u2014 _FACADE232 menu (blocker); email lists all 39 rows"},
+{id:"26.O",s:"q",ch:["26","261"],ttl:"26.O01 vs 26.O02 \u2014 same roof entered twice?",a:"No answer yet.",did:"26.O02 is a line-for-line clone of 26.O01 \u2014 106 rows, 45% of the chapter. Two real roof areas, or the roof entered twice? Nothing distinguishes them; each m\u00b2 also carries the ceiling build-up (double-count risk).",need:"Confirm two areas vs one \u2014 can move the roof-chapter total by ~2\u00d7.",where:"chapter-261 scope \u2014 unchanged until answered"},
+{id:"C1",s:"q",ch:["25","251","252"],ttl:"Spennkabler \u2014 how to apply 15 kg/m\u00b3 to an m\u00b2 quantity",a:"Gave <b>15 kg/m\u00b3</b>, but the quantity is in m\u00b2.",did:"Not applicable as-is. Method is our call: \u00d7 deck thickness \u2192 m\u00b3 \u00d7 15 \u2192 kg, or another reading, then map to the rebar EPD.",need:"Agree the m\u00b2\u2192kg method (deck thickness?). Same numbers feed the DT-elements.",where:"group_assign_251/252 \u2014 'spennkabler' (blocker)"},
+{id:"C3",s:"q",ch:["23","231"],ttl:"Precast concrete EPD for skallvegg",a:"Approach approved (A4); the split dataset not chosen.",did:"Decide: keep the Con-Form per-m\u00b2 EPD already in the build, or split into 0.1 m\u00b3/m\u00b2 precast concrete + 10.5 kg/m\u00b2 rebar on a precast dataset.",need:"Pick the precast concrete dataset if we split.",where:"group_assign_231 \u2014 skallvegg (reconcile with A4)"},
+{id:"C2",s:"q",ch:["21"],ttl:"Which generics move to Enova / Boverket",a:"\u201cUse Enova or Boverket\u201d as a general steer \u2014 no list.",did:"Our call on which current picks actually switch (Boverket was previously excluded by you).",need:"Decide the scope of the switch.",where:"cross-cutting EPD picks"},
+{id:"\u2014",s:"q",ch:["21","23","25"],ttl:"Standing assumptions to confirm",a:"No answer yet.",did:"Applied on best assumption meanwhile, each flagged: concrete class B45 vs B40; impregnated glulam sharing the gran EPD; HD 200\u2192HD 210; mineral-wool assumption + derived rebar 80 kg/m\u00b3; Magerbetong B20 vs B30; Leca pussm\u00f8rtel vs the per-m\u00b2 EPD; Isolering av vegg Rockwool vs generic; zero-qty rows.",need:"A yes/no on each at the meeting.",where:"each carries a note in the master"},
+
+{id:"WD",s:"data",ch:["23","234"],ttl:"\u26a0 Windows & doors were never delivered",a:"Never in scope.",did:"Confirmed: <b>no NS3451 234 (or 244) anywhere</b> in the library or any file. The only 'window/door' rows are flashings over openings and voids \u2014 no actual products.",need:"Send the NS3451 <b>234</b> (and 244) windows/doors export in the standard chapter format. EPD choice decided once we see it.",where:"new group_assign_234 once received; add to build_master FILES"},
+{id:"D4",s:"data",ch:["22","222"],ttl:"222-I is the wrong export",a:"\u201cWe sent a new file earlier.\u201d",did:"On hold on Veidekke\u2019s side; the 265 visible rows stay merged meanwhile. We redo the chapter on the correct file when it arrives.",need:"The correct 222 file (or confirm this one is right).",where:"whole 222 branch \u2014 re-run on the new file"},
+{id:"A3",s:"data",ch:["all","21","22","23","25"],ttl:"Rebar \u2192 Celsa (every chapter)",a:"\u201cOnly buy from Celsa \u2014 EPD-IES-0000306:006 (S-P-00306).\u201d",did:"Held. The exact Celsa EPD isn\u2019t in the Reduzer library (only entry expired 2021). Colleague message sent 3 Sep to add S-P-00306. Rebar stays on the Enova generic until the ID exists.",need:"The S-P-00306 Reduzer library ID. Biggest ripple \u2014 touches every chapter.",where:"when it lands: every 'armering' branch (now K1GLOoaSiXFa6AUukxY7)"},
+{id:"A8",s:"data",ch:["23","232"],ttl:"Sto Ventec accessories \u2192 merge to one",a:"\u201cAll in the Sto Ventec EPD, merge to one. Use Sto Ventec R.\u201d",did:"Held. StoVentec R isn\u2019t in the library; no PDF/number given. Merge-to-one structure can build with the EPD blank.",need:"The StoVentec R system EPD (per m\u00b2).",where:"group_name_232 \u2014 .030/.042\u2026 \u2192 one 'Sto Ventec R' line"},
+{id:"C4",s:"data",ch:["23","232"],ttl:"Brick EPD per format (teglforblending)",a:"No brick EPD named.",did:"A6 structure (keep m\u00b2) ships with the EPD blank per format. Other C4 lookups done/held: Sundolitt \u2713, Hunton \u2713, Celsa \u23f8, Sto Ventec R \u23f8.",need:"Which brick EPD per format \u2014 Dansk / Tysk / Finsk / Langformat.",where:"group_assign_232 \u2014 teglforblending (id blank per format)"},
+{id:"B1",s:"data",ch:["23","232"],ttl:"Beslag / blikk (~35 rows)",a:"Tollef: \u201cQuestion for Herman \u2014 is this excludable?\u201d",did:"Parked pending Herman. (Sokkelbeslag already split out & mapped m\u00b2\u2192kg.)",need:"Herman: exclude, or one consistent unit + a gauge.",where:"group_assign_232 \u2014 'beslag og blikk' (blocker)"},
+{id:"B2",s:"data",ch:["23","26"],ttl:"Sandwich / prefab facade element EPDs",a:"Tollef: put Herman on it \u2014 element EPDs are his domain.",did:"Parked pending Herman (23.G05, 232 sandwich, 26.J06, 26.L01).",need:"Herman: per-m\u00b2 element EPDs.",where:"blockers in group_assign_231/232/26"},
+{id:"B3",s:"data",ch:["22","223"],ttl:"223 steel EPDs + Gitterdrager mass",a:"Herman\u2019s (pre-existing).",did:"Steel-in-kg lines carry interim Enova generics; the four Gitterdrager are blocked on a mass.",need:"Herman for the steel EPDs; Veidekke for what a Gitterdrager truss weighs.",where:"group_assign_223"},
+{id:"D3",s:"data",ch:["26","261"],ttl:"26 four mass-less element lines",a:"\u201cNeed a work-around \u2014 the build-up varies a lot.\u201d",did:"On hold \u2014 1 m\u00b2 each, resource is a price line, no mass (st\u00e5lplatetak, Lett-Tak, sandwich, curtainwall).",need:"kg/m\u00b2 or a per-m\u00b2 element EPD for each.",where:"group_assign_26"},
+{id:"D1",s:"data",ch:["23","231"],ttl:"23.G05 prefab betong facade 450 mm",a:"\u201cProject-specific\u2026 can I be prompted about this?\u201d",did:"On hold \u2014 1 m\u00b2 each, empty resource, no mass.",need:"A per-m\u00b2 EPD, the plant, or a material split.",where:"group_assign_231 \u2014 'isolerte fasadeelementer'"},
+{id:"D5",s:"data",ch:["25","251"],ttl:"DT-elementer t = 500\u2013800 mm",a:"Still no numbers.",did:"On hold \u2014 same mass-less problem as D3.",need:"m\u00b3 of element per m\u00b2 (per thickness), then one EPD covers the element (do not split).",where:"group_assign_251 \u2014 'dt-element'"},
+
+{id:"A6",s:"ready",ch:["23","232"],ttl:"Teglforblending \u2014 keep only the m\u00b2 line",a:"\u201cThe m\u00b2 line is complete brickwork. Different IDs, all used \u2014 OK.\u201d",did:"Ready to build: keep the four m\u00b2 rows, drop the duplicate m (murarmering) & kg (mortar) rows. (Brick EPD still pending \u2014 C4.)",need:"Just our next extractor run.",where:"group_assign_232 \u2014 add extraction drop for the m/kg rows"},
+{id:"A12",s:"ready",ch:["26","261"],ttl:"Vindskier av tre \u2014 keep the middle width",a:"\u201cAlternatives \u2014 use the middle one.\u201d (22\u00d7173)",did:"Ready to build: keep GRAN 22\u00d7173, drop 22\u00d7148 and 22\u00d7198.",need:"Just our next extractor run.",where:"chapter-261 extraction filter on the vindskier rows"},
+
+{id:"A5",s:"done",ch:["23","231"],ttl:"Leca u-blokk \u2014 keep the t\u00f8rrbetong",a:"\u201cNeglect the strips, use density 2000 kg/m\u00b3.\u201d",did:"APPLIED 23 Sep \u2014 t\u00f8rrbetong kept, kg\u2192m\u00b3 \u00f72000 onto the B20 low-carbon EPD; shell + strips dropped.",where:"t\u00f8rrbetong branch re-activated; EPD 0egqpz4zK5AKAOTkX5d2. DECISIONS \u00a752"},
+{id:"A9",s:"done",ch:["23","232"],ttl:"Grunnmursplate EPS \u2192 Sundolitt EPS S80",a:"\u201cUse Sundolitt for this too.\u201d",did:"Applied 3 Sep \u2014 EPS lines on Sundolitt EPS S80, per m\u00b3.",where:"group_assign_232 \u2192 NdaQivcjzeX8sU9LLykS"},
+{id:"A13",s:"done",ch:["26","261"],ttl:"I-bjelker \u2192 Hunton per-metre I-joist EPD",a:"\u201cYes, use Hunton.\u201d",did:"Applied 3 Sep \u2014 12 I-joist lines on the Hunton per-metre EPD.",where:"group_assign_26 \u2192 cnfOYXKka9MJFaeCB1BL"},
+{id:"A7",s:"done",ch:["23","232"],ttl:"Steel studs (tynnplateprofiler) lm \u2192 kg",a:"\u201cUse as proposed.\u201d",did:"In the master \u2014 lm\u2192kg per profile on the Enova thin-profile EPD. (245 mm profiles clamped/understated \u2014 kg/m still wanted.)",where:"STEEL_PROFILE_KG_M \u2192 cXU298TKhfQKCeNiz1q1"},
+{id:"A4",s:"done",ch:["23","231"],ttl:"Skallvegg 50-50 twin-wall",a:"\u201cThe approach is good.\u201d",did:"In the master \u2014 Con-Form 'Shell wall (Orkanger)' per m\u00b2; rebar inside the EPD; derived EPS added where the model had none. (See C3.)",where:"group_assign_231 \u2192 C8lhsdUgnH7jj0DxQGtt"},
+{id:"A1",s:"done",ch:["21","216","223"],ttl:"Concrete EPD \u2014 normal + watertight",a:"\u201cOK to use the same, till further advised.\u201d",did:"No change \u2014 low-carbon 20 on both.",where:"216 concrete \u2192 sy0z9WpGr2zoNwIGfNDy"},
+{id:"A2",s:"done",ch:["21","216"],ttl:"XPS insulation brand (Sundolitt)",a:"\u201cIt is okay.\u201d",did:"No change \u2014 Sundolitt XPS 250 & 300 kPa kept.",where:"216 XPS \u2192 OYvuKLsimyPXkrQt26gl / frbmxcvvxYwz9LwYyN1h"},
+{id:"A10",s:"done",ch:["26","261"],ttl:"Renamed / dropped lines in the roof file",a:"I-bjelke \u2713 \u00b7 Svillemembran \u2713 \u00b7 Fugemasse drop \u2713 \u00b7 Lekter \u2713",did:"Matches the build.",where:"resource-rename pass \u00b7 MATERIAL_EXCLUDED (fugemasse)"},
+{id:"A11",s:"done",ch:["26","261"],ttl:"Roof conversions & Svinn strip",a:"\u201cAll OK / the strip is correct.\u201d",did:"No change \u2014 confirms the per-row conversions and the waste strip.",where:"chapter-26 per-row conversions \u00b7 SVINN_IF_DIFFERS"},
+];
+function mvCard(d){
+  const tone=MG[d.s].tone, done=d.s==="done";
+  const pill=MG[d.s].label.split("\u2014")[0].trim();
+  return `<details class="mv-card ${tone} ${done?"done":""}">
+    <summary><span class="caret">\u25b6</span>${done?'<span class="mv-check">\u2713</span>':""}
+      <span class="mv-id">${d.id}</span>
+      <span class="mv-tw"><span class="mv-t">${d.ttl}</span>${d.ch.map(c=>`<span class="mv-ch">${c}</span>`).join("")}</span>
+      <span class="mv-pill ${tone}">${pill}</span></summary>
+    <dl class="mv-body">
+      <dt>They said</dt><dd>${d.a}</dd>
+      <dt>Status</dt><dd>${d.did}</dd>
+      ${d.need?`<dt>${d.s==="data"?"Waiting for":"We need"}</dt><dd class="${d.s==="data"?"mv-wait":"mv-need"}">${d.need}</dd>`:""}
+      ${d.where?`<dt class="internal-only">Where</dt><dd class="internal-only"><div class="mv-where">${d.where}</div></dd>`:""}
+    </dl></details>`;
+}
+function renderMeeting(){
+  const c=Object.fromEntries(MORD.map(k=>[k,MD.filter(d=>d.s===k).length])), tot=MD.length;
+  const w=k=>c[k]/tot*100;
+  document.getElementById("mvProg").innerHTML=
+    `<i style="width:${w("done")}%;background:var(--good)"></i><i style="width:${w("ready")}%;background:var(--info)"></i>`+
+    `<i style="width:${w("data")}%;background:var(--warn)"></i><i style="width:${w("q")}%;background:var(--crit)"></i>`;
+  document.getElementById("mvLbl").innerHTML=
+    `<b class="mono">${c.done}</b> done \u00b7 <b class="mono">${c.ready}</b> ready \u00b7 <b class="mono">${c.data}</b> pending data \u00b7 <b class="mono">${c.q}</b> open questions`;
+  const qq=q, cc=code;
+  document.getElementById("mvBody").innerHTML=MORD.map(k=>{
+    let items=MD.filter(d=>d.s===k);
+    if(cc)items=items.filter(d=>d.ch.some(x=>x.startsWith(cc)));
+    if(qq)items=items.filter(d=>(d.id+" "+d.ttl+" "+d.a+" "+d.did+" "+(d.need||"")+" "+(d.where||"")+" "+d.ch.join(" ")).toLowerCase().includes(qq));
+    if(!items.length)return"";
+    return `<section class="mv-grp"><div class="mv-gh"><h3>${MG[k].label}</h3><span class="cnt">${items.length}</span><div class="bl">${MG[k].blurb}</div></div><div class="mv-cards">${items.map(mvCard).join("")}</div></section>`;
+  }).join("")||'<div class="empty">Nothing matches.</div>';
+}
+// re-render meeting on search too (the board's #q handler calls render())
+const _mt=document.getElementById("modeToggle");
+function setClient(on){document.body.classList.toggle("client",on);_mt.dataset.on=on?"0":"1";_mt.textContent=on?"Client view":"Internal view";try{localStorage.setItem("mtg_mode",on?"c":"i")}catch(e){}}
+_mt.addEventListener("click",()=>setClient(!document.body.classList.contains("client")));
+let _m0=true;try{_m0=(localStorage.getItem("mtg_mode")||"c")==="c"}catch(e){}
+setClient(_m0);
+
 render();
 </script>
 
